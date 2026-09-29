@@ -1,0 +1,20 @@
+{
+  "search": {
+    "description": "Search for jobs on LinkedIn for a specific role and company. If job role and company are not provided as command-line arguments, job roles will be taken from the interested_job_role file.",
+    "arguments": [
+      {
+        "name": "job_role",
+        "type": "string",
+        "required": false,
+        "description": "The job role/title to search for (e.g., 'Software Engineer', 'Data Scientist')"
+      },
+      {
+        "name": "company",
+        "type": "string",
+        "required": false,
+        "description": "The company name to search jobs for"
+      }
+    ],
+    "usage": "python main.py search [--job_role <role>] [--company <company>]"
+  }
+}
