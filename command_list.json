@@ -1,6 +1,6 @@
 {
   "search": {
-    "description": "Search for jobs on LinkedIn for a specific role and company. If job role and company are not provided as command-line arguments, job roles will be taken from the interested_job_role file.",
+    "description": "Search for jobs on LinkedIn for a specific role and company. If job role and company are not provided as command-line arguments, job roles will be taken from the interested_job_role file. Fetches full job descriptions and company application links.",
     "arguments": [
       {
         "name": "job_role",
@@ -16,5 +16,18 @@
       }
     ],
     "usage": "python main.py search [--job_role <role>] [--company <company>]"
+  },
+  "tailor_resume": {
+    "description": "Tailor your resume for a specific job from the searched jobs list. Analyzes match percentage between your resume and the job description. If match is below 80%, automatically removes unnecessary sections and adds relevant STAR format bullet points with realistic metrics. Generates a tailored PDF resume using LaTeX (Overleaf template).",
+    "arguments": [
+      {
+        "name": "serial_number",
+        "type": "integer",
+        "required": true,
+        "description": "The serial number of the job from searched_job_list/searched_jobs.csv"
+      }
+    ],
+    "usage": "python main.py tailor_resume <serial_number>",
+    "example": "python main.py tailor_resume 10"
   }
 }

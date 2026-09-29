@@ -24,6 +24,55 @@ class LinkedInJobScraper:
         with open('interested_job_role/job_role.txt', 'r') as f:
             return [line.strip() for line in f if line.strip()]
 
+    def _fetch_job_details(self, job_id: str) -> tuple:
+        """Fetch full job details including company apply link and job description."""
+        try:
+            job_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
+            response = self.session.get(job_url)
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Extract company apply link
+            apply_link_tag = soup.find('a', class_='apply-button')
+            if not apply_link_tag:
+                apply_link_tag = soup.find('a', string=lambda text: text and 'apply' in text.lower())
+
+            company_apply_link = apply_link_tag.get('href', 'N/A') if apply_link_tag else 'N/A'
+
+            # Extract company job ID from apply link if available
+            company_job_id = 'N/A'
+            if company_apply_link != 'N/A':
+                # Try to extract job ID from URL patterns
+                import re
+                # Common patterns: /jobs/12345, jobId=12345, job-12345, etc.
+                patterns = [
+                    r'/jobs?[/-](\w+)',
+                    r'jobId[=:](\w+)',
+                    r'job[_-]id[=:](\w+)',
+                    r'posting[_-]?id[=:](\w+)',
+                    r'requisition[_-]?id[=:](\w+)'
+                ]
+                for pattern in patterns:
+                    match = re.search(pattern, company_apply_link, re.IGNORECASE)
+                    if match:
+                        company_job_id = match.group(1)
+                        break
+
+            # Extract job description
+            desc_tag = soup.find('div', class_='description')
+            if not desc_tag:
+                desc_tag = soup.find('div', class_='show-more-less-html__markup')
+
+            job_description = desc_tag.get_text(strip=True) if desc_tag else 'N/A'
+
+            time.sleep(1)  # Be respectful
+            return company_apply_link, company_job_id, job_description
+
+        except Exception as e:
+            print(f"Error fetching job details for {job_id}: {str(e)}")
+            return 'N/A', 'N/A', 'N/A'
+
     def search_jobs(self, job_role: Optional[str] = None, company: Optional[str] = None) -> pd.DataFrame:
         """Search for jobs on LinkedIn filtered by past week and location India."""
         all_jobs = []
@@ -76,15 +125,20 @@ class LinkedInJobScraper:
                         time_tag = card.find('time')
                         posted_date = time_tag.get('datetime', 'N/A') if time_tag else 'N/A'
 
+                        # Fetch full job details including company apply link
+                        company_apply_link, company_job_id, job_description = self._fetch_job_details(job_id)
+
                         all_jobs.append({
                             'linkedin_job_id': job_id,
                             'linkedin_link': f"https://www.linkedin.com/jobs/view/{job_id}",
-                            'company_website_link': 'N/A',  # Not available in public search
+                            'company_apply_link': company_apply_link,
+                            'company_job_id': company_job_id,
                             'job_title': job_title,
                             'company': company_name,
                             'location': location,
                             'posted_date': posted_date,
-                            'search_role': role
+                            'search_role': role,
+                            'job_description': job_description
                         })
 
                     except Exception as e:
