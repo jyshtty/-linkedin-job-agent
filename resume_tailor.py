@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 from dotenv import load_dotenv
 import json
 import re
+from linkedin_scraper import LinkedInJobScraper
 
 
 class ResumeTailor:
@@ -18,6 +19,7 @@ class ResumeTailor:
             raise ValueError("ANTHROPIC_API_KEY not found in .env file")
 
         self.client = anthropic.Anthropic(api_key=self.anthropic_api_key)
+        self.scraper = LinkedInJobScraper()
         self.searched_jobs_file = 'searched_job_list/searched_jobs.csv'
         self.original_resume_path = 'original_resume/Ajay_resume.pdf'
         self.tailored_resume_dir = 'tailored_resume'
@@ -255,7 +257,20 @@ Use the 'article' or 'resume' document class with professional formatting.
 
         print(f"Job: {job['job_title']}")
         print(f"Company: {job['company']}")
-        print(f"Location: {job['location']}\n")
+        print(f"Location: {job['location']}")
+
+        # Fetch full job details (description, company link) on-demand
+        print("📥 Fetching full job details from LinkedIn...")
+        job_details = self.scraper.fetch_job_details(job['linkedin_job_id'])
+        job_description = job_details['job_description']
+        company_apply_link = job_details['company_apply_link']
+        company_job_id = job_details['company_job_id']
+
+        if job_description == 'N/A':
+            print("⚠️  Could not fetch full job description. Using basic info for tailoring.")
+            job_description = f"Job Title: {job['job_title']}\nCompany: {job['company']}\nLocation: {job['location']}"
+
+        print()
 
         # Extract resume text
         print("📄 Reading original resume...")
@@ -263,7 +278,7 @@ Use the 'article' or 'resume' document class with professional formatting.
 
         # Calculate match percentage
         print("🔍 Analyzing match with job description...")
-        analysis = self._calculate_match_percentage(resume_text, job['job_description'])
+        analysis = self._calculate_match_percentage(resume_text, job_description)
         match_percentage = analysis['match_percentage']
 
         print(f"\n📊 Match Score: {match_percentage}%")
@@ -278,14 +293,14 @@ Use the 'article' or 'resume' document class with professional formatting.
 
         # Identify sections to remove
         print("🗑️  Identifying irrelevant sections...")
-        sections_to_remove = self._identify_sections_to_remove(resume_text, job['job_description'])
+        sections_to_remove = self._identify_sections_to_remove(resume_text, job_description)
         if sections_to_remove:
             print(f"   Removing: {', '.join(sections_to_remove)}")
 
         # Generate new STAR bullets
         print("✨ Generating STAR format bullet points...")
         new_bullets = self._generate_star_bullets(
-            job['job_description'],
+            job_description,
             analysis['missing_skills'][:3],  # Top 3 missing skills
             job['company']
         )
@@ -294,14 +309,13 @@ Use the 'article' or 'resume' document class with professional formatting.
 
         # Generate output filename
         company_name = job['company'].replace(' ', '_').replace('/', '_')
-        company_job_id = job.get('company_job_id', 'NA')
         output_filename = f"{company_name}_{serial_number}_{job['linkedin_job_id']}_{company_job_id}.pdf"
 
         # Generate LaTeX resume
         print(f"\n📝 Generating tailored resume...")
         tex_path = self._generate_latex_resume(
             resume_text,
-            job['job_description'],
+            job_description,
             sections_to_remove,
             new_bullets,
             output_filename

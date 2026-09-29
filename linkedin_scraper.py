@@ -24,8 +24,11 @@ class LinkedInJobScraper:
         with open('interested_job_role/job_role.txt', 'r') as f:
             return [line.strip() for line in f if line.strip()]
 
-    def _fetch_job_details(self, job_id: str) -> tuple:
-        """Fetch full job details including company apply link and job description."""
+    def fetch_job_details(self, job_id: str) -> dict:
+        """
+        Fetch full job details including company apply link and job description.
+        This is a public method to be called on-demand (e.g., by tailor_resume).
+        """
         try:
             job_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
             response = self.session.get(job_url)
@@ -66,12 +69,20 @@ class LinkedInJobScraper:
 
             job_description = desc_tag.get_text(strip=True) if desc_tag else 'N/A'
 
-            time.sleep(1)  # Be respectful
-            return company_apply_link, company_job_id, job_description
+            return {
+                'company_apply_link': company_apply_link,
+                'company_job_id': company_job_id,
+                'job_description': job_description
+            }
 
         except Exception as e:
-            print(f"Error fetching job details for {job_id}: {str(e)}")
-            return 'N/A', 'N/A', 'N/A'
+            print(f"Warning: Could not fetch full job details for {job_id}: {str(e)}")
+            print("Proceeding with basic job information...")
+            return {
+                'company_apply_link': 'N/A',
+                'company_job_id': 'N/A',
+                'job_description': 'N/A'
+            }
 
     def search_jobs(self, job_role: Optional[str] = None, company: Optional[str] = None) -> pd.DataFrame:
         """Search for jobs on LinkedIn filtered by past week and location India."""
@@ -109,7 +120,10 @@ class LinkedInJobScraper:
                             continue
 
                         job_url = job_link_tag.get('href', '')
-                        job_id = job_url.split('/')[-1].split('?')[0] if job_url else 'N/A'
+                        # Extract numeric job ID from URL (e.g., from /jobs/view/4331060877)
+                        import re
+                        job_id_match = re.search(r'/(\d+)', job_url)
+                        job_id = job_id_match.group(1) if job_id_match else job_url.split('/')[-1].split('?')[0]
 
                         # Extract job details
                         title_tag = card.find('h3', class_='base-search-card__title')
@@ -125,20 +139,14 @@ class LinkedInJobScraper:
                         time_tag = card.find('time')
                         posted_date = time_tag.get('datetime', 'N/A') if time_tag else 'N/A'
 
-                        # Fetch full job details including company apply link
-                        company_apply_link, company_job_id, job_description = self._fetch_job_details(job_id)
-
                         all_jobs.append({
                             'linkedin_job_id': job_id,
                             'linkedin_link': f"https://www.linkedin.com/jobs/view/{job_id}",
-                            'company_apply_link': company_apply_link,
-                            'company_job_id': company_job_id,
                             'job_title': job_title,
                             'company': company_name,
                             'location': location,
                             'posted_date': posted_date,
-                            'search_role': role,
-                            'job_description': job_description
+                            'search_role': role
                         })
 
                     except Exception as e:

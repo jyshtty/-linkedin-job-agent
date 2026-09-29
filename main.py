@@ -19,7 +19,7 @@ def main():
             print(f"\n{'='*100}")
             print(f"{'SEARCH RESULTS':^100}")
             print(f"{'='*100}")
-            print(df[['serial_number', 'linkedin_job_id', 'company_apply_link']].to_string(index=False))
+            print(df[['serial_number', 'job_title', 'company', 'location']].to_string(index=False))
             print(f"{'='*100}\n")
 
     elif args.command == 'tailor_resume':
