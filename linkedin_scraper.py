@@ -69,7 +69,12 @@ class LinkedInJobScraper:
         This is a public method to be called on-demand (e.g., by tailor_resume).
         """
         try:
-            job_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
+            # Extract numeric job ID from slug format (e.g., "lead-engineer-at-target-4469431197" -> "4469431197")
+            import re
+            numeric_id_match = re.search(r'(\d+)$', job_id)
+            numeric_job_id = numeric_id_match.group(1) if numeric_id_match else job_id
+
+            job_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{numeric_job_id}"
             response = self.session.get(job_url)
             response.raise_for_status()
 
@@ -142,16 +147,17 @@ class LinkedInJobScraper:
             print(f"\nSearching: {role} in India" + (f" at {company}" if company else ""))
 
             try:
+                # When company is specified, include it in keywords instead of using f_C filter
+                # LinkedIn's f_C requires company ID which we don't have
+                search_keywords = f"{role} {company}" if company else role
+
                 params = {
-                    'keywords': role,
+                    'keywords': search_keywords,
                     'location': 'India',
                     'f_TPR': f'r{past_week_seconds}',  # Past week filter
                     'f_AL': 'true',  # Filter: Show only jobs with external apply (not Easy Apply)
                     'start': 0
                 }
-
-                if company:
-                    params['f_C'] = company
 
                 response = self.session.get(self.base_url, params=params)
                 response.raise_for_status()
