@@ -24,6 +24,45 @@ class LinkedInJobScraper:
         with open('interested_job_role/job_role.txt', 'r') as f:
             return [line.strip() for line in f if line.strip()]
 
+    def _get_company_apply_url(self, job_id: str) -> str:
+        """
+        Get the company career page URL for a job.
+        Returns 'EASY_APPLY' if it's an Easy Apply job.
+        Returns 'N/A' if no external apply link found.
+        """
+        try:
+            job_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
+            response = self.session.get(job_url)
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Check if it's Easy Apply
+            easy_apply_button = soup.find('button', string=lambda text: text and 'easy apply' in text.lower())
+            if easy_apply_button:
+                return 'EASY_APPLY'
+
+            # Look for external apply button/link
+            apply_button = soup.find('a', class_='apply-button')
+            if not apply_button:
+                apply_button = soup.find('a', {'data-tracking-control-name': 'public_jobs_apply-link-offsite'})
+            if not apply_button:
+                # Look for any link with "apply" text
+                apply_button = soup.find('a', string=lambda text: text and 'apply' in text.lower() and 'easy' not in text.lower())
+
+            if apply_button:
+                company_url = apply_button.get('href', 'N/A')
+                # Filter out LinkedIn Easy Apply URLs
+                if 'linkedin.com/job-apply' in company_url or 'linkedin.com/jobs/apply' in company_url:
+                    return 'EASY_APPLY'
+                return company_url
+
+            return 'N/A'
+
+        except Exception as e:
+            print(f"   Error checking apply type for job {job_id}: {str(e)}")
+            return 'N/A'
+
     def fetch_job_details(self, job_id: str) -> dict:
         """
         Fetch full job details including company apply link and job description.
@@ -36,12 +75,19 @@ class LinkedInJobScraper:
 
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Extract company apply link
+            # Extract company apply link (external career page URL)
             apply_link_tag = soup.find('a', class_='apply-button')
             if not apply_link_tag:
-                apply_link_tag = soup.find('a', string=lambda text: text and 'apply' in text.lower())
+                apply_link_tag = soup.find('a', {'data-tracking-control-name': 'public_jobs_apply-link-offsite'})
+            if not apply_link_tag:
+                # Look for any external apply link
+                apply_link_tag = soup.find('a', string=lambda text: text and 'apply' in text.lower() and 'easy' not in text.lower())
 
             company_apply_link = apply_link_tag.get('href', 'N/A') if apply_link_tag else 'N/A'
+
+            # Skip if it's an Easy Apply link
+            if company_apply_link != 'N/A' and ('linkedin.com/job-apply' in company_apply_link or 'linkedin.com/jobs/apply' in company_apply_link):
+                company_apply_link = 'EASY_APPLY'
 
             # Extract company job ID from apply link if available
             company_job_id = 'N/A'
@@ -100,6 +146,7 @@ class LinkedInJobScraper:
                     'keywords': role,
                     'location': 'India',
                     'f_TPR': f'r{past_week_seconds}',  # Past week filter
+                    'f_AL': 'true',  # Filter: Show only jobs with external apply (not Easy Apply)
                     'start': 0
                 }
 
@@ -139,9 +186,12 @@ class LinkedInJobScraper:
                         time_tag = card.find('time')
                         posted_date = time_tag.get('datetime', 'N/A') if time_tag else 'N/A'
 
+                        # Store company_career_url and company_job_id as placeholders - will be fetched on-demand
                         all_jobs.append({
                             'linkedin_job_id': job_id,
                             'linkedin_link': f"https://www.linkedin.com/jobs/view/{job_id}",
+                            'company_career_url': 'TBD',  # To be determined when tailoring resume
+                            'company_job_id': 'TBD',  # To be determined when tailoring resume
                             'job_title': job_title,
                             'company': company_name,
                             'location': location,

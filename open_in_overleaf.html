@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compile LaTeX Resumes - Overleaf Helper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .instructions {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+
+        .instructions h2 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            color: #4a5568;
+            line-height: 1.8;
+        }
+
+        .instructions li {
+            margin-bottom: 10px;
+        }
+
+        .files-section {
+            margin-top: 30px;
+        }
+
+        .files-section h2 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+
+        .file-card {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .file-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .file-info {
+            margin-bottom: 15px;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 16px;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .file-details {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 14px;
+            color: #718096;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 8px 20px rgba(72, 187, 120, 0.4);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tip {
+            background: #fef5e7;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin-top: 30px;
+            border-radius: 8px;
+            color: #7d6608;
+        }
+
+        .tip strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #f39c12;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 LaTeX Resume Compiler</h1>
+            <p>Compile your tailored resumes using Overleaf</p>
+        </div>
+
+        <div class="content">
+            <div class="instructions">
+                <h2>📋 Quick Instructions</h2>
+                <ol>
+                    <li><strong>Click "Open in Overleaf"</strong> button below for any resume</li>
+                    <li><strong>Sign up/Login</strong> to Overleaf (free account)</li>
+                    <li><strong>Upload the .tex file</strong> when prompted</li>
+                    <li><strong>Wait 2-3 seconds</strong> for auto-compilation</li>
+                    <li><strong>Download PDF</strong> using the download button in Overleaf</li>
+                </ol>
+            </div>
+
+            <div class="files-section">
+                <h2>🎯 Your Tailored Resumes</h2>
+
+                <div class="file-card">
+                    <div class="file-info">
+                        <div class="file-name">Job #1: DevOps Engineer - GitLab Enterprise @ Luxoft</div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <span>📊</span>
+                                <span>Match: 72%</span>
+                            </div>
+                            <div class="detail-item">
+                                <span>📍</span>
+                                <span>Mumbai, India</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <a href="https://www.overleaf.com/project/new/upload" target="_blank" class="btn">
+                            🚀 Open in Overleaf
+                        </a>
+                        <button class="btn btn-secondary" onclick="copyPath('tailored_resume/Luxoft_1_devops-engineer-gitlab-enterprise-at-luxoft-4469134309_NA.tex')">
+                            📋 Copy File Path
+                        </button>
+                    </div>
+                </div>
+
+                <div class="file-card">
+                    <div class="file-info">
+                        <div class="file-name">Job #8: Azure DevOps Engineer (Terraform + Kubernetes) @ TCS</div>
+                        <div class="file-details">
+                            <div class="detail-item">
+                                <span>📊</span>
+                                <span>Match: 62%</span>
+                            </div>
+                            <div class="detail-item">
+                                <span>📍</span>
+                                <span>Hyderabad, India</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <a href="https://www.overleaf.com/project/new/upload" target="_blank" class="btn">
+                            🚀 Open in Overleaf
+                        </a>
+                        <button class="btn btn-secondary" onclick="copyPath('tailored_resume/Tata_Consultancy_Services_8_azure-devops-engineer-terraform-%2B-kubernetes-at-tata-consultancy-services-4469102982_NA.tex')">
+                            📋 Copy File Path
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tip">
+                <strong>💡 Pro Tip:</strong>
+                Click "Copy File Path", then drag and drop the file directly into Overleaf's upload dialog. Or navigate to the tailored_resume/ folder in Finder and upload from there.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function copyPath(path) {
+            const fullPath = `/Users/ajaykumar_shetty/PycharmProjects/-linkedin-job-agent/${path}`;
+            navigator.clipboard.writeText(fullPath).then(() => {
+                alert('✅ File path copied to clipboard!\n\n' + fullPath + '\n\nNow upload this file to Overleaf.');
+            }).catch(err => {
+                alert('❌ Could not copy to clipboard. Path:\n\n' + fullPath);
+            });
+        }
+    </script>
+</body>
+</html>

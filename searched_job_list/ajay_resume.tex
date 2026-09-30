@@ -1,0 +1,169 @@
+        \documentclass[11 pt]{article}
+
+\usepackage[a4paper,margin=0.75in]{geometry}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+% ---------- Font (Times-style, ATS-safe) ----------
+\usepackage{newtxtext}
+\usepackage{newtxmath}
+
+% ---------- Colors ----------
+\definecolor{PrimaryBlue}{HTML}{1F4FD8}
+\definecolor{SecondaryGray}{HTML}{555555}
+\definecolor{LightGray}{HTML}{777777}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\titlespacing{\section}{0pt}{6pt}{4pt}
+
+\setlist[itemize]{noitemsep, topsep=0pt, parsep=0pt, partopsep=0pt}
+
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{Ajay Shetty}} \\[4pt]
+    \textbf{Senior Software Engineer} | \textbf{Backend} • \textbf{Cloud} • \textbf{ Distributed systems} \\[6pt]
+
+    \href{https://www.scaler.com/academy/profile/e30cd4a603ce/}{\textbf{Scaler Profile}} \, | \,
+    \href{tel:8660187964}{\textbf{8660187964}} \, | \,
+    \href{mailto:jyshtty@gmail.com}{\textbf{jyshtty@gmail.com}} \, | \,
+    \href{https://www.linkedin.com/in/ajay-shetty-2b5901ab/}{\textbf{LinkedIn}} \,|\,
+    \href{https://github.com/jyshtty}{\textbf{GitHub}} \, | \,
+    \href{https://leetcode.com/u/jyshtty/}{\textbf{LeetCode} (3 star)}
+\end{center}
+
+\section*{\textbf{Summary}}
+\textbf{Senior software engineer}  with experience designing distributed systems, cloud-native platforms, and developed infrastructure on AWS. Specializes in platform engineering, event-driven architectures, secure data systems, and Agentic AI/GenAI-powered developer tooling.
+
+
+
+\section*{\textbf{Skills}}
+
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\textbf{Languages:} Python, Java, Go, JavaScript \\[1pt]
+\textbf{Agentic AI:} LangGraph, LangChain, RAG, MCP. \\[1pt]
+\textbf{Databases:} PostgreSQL, SQL, NoSQL \\[1pt]
+\textbf{CI/CD:} Jenkins, GitHub Actions, CodePipeline \\[1pt]
+\textbf{Observability:} Datadog, Grafana, CloudWatch
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\textbf{Frameworks:} Django, FastAPI, Spring Boot, React.  \\[1pt]
+\textbf{Cloud:} AWS, GCP, Docker, CloudFormation, IaC \\[1pt]
+\textbf{Messaging:} RabbitMQ, Kafka \\[1pt]
+\textbf{Other:} System Design, DSA, Data Engineering, Airflow, Kubernetes
+\end{minipage}
+
+\section*{\textbf{Education}}
+
+\noindent
+\textbf{Woolf European University} \hfill \href{https://woolf.university/id/151331132?token=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6IjA5MDUyMTNjLTQxMTMtNGM2MS1hZmE3LTdkZGFiNWYyOGM5NyIsImlzcyI6InVybjpXb29sZlVuaXZlcnNpdHk6c2VydmVyL3NlcnZpY2UvYWNjZXNzIiwiaXNWZXJpZmllZCI6dHJ1ZSwia2luZCI6Im9hdXRoIiwib3JnIjp7Imdyb3VwcyI6W10sImlkIjoiOWIxN2Y1Y2UtMTA3OC00ZmRmLWFlYzAtMDJiZjRlY2ZiMGE2In0sInNjb3BlIjoiKiJ9.f-CFNfydAn-GSaAiGUkWhNAT3Yn_P7C0O7cjrRH7Eq} {\textbf{Transcript link}} \ \\
+\small M.S. in Computer Software Engineering
+
+\vspace{6pt}
+
+\noindent\textbf{BMS IT, Bangalore}  \\
+\small B.E. in Electronics and Communication Engineering
+
+\section*{\textbf{Experience}}
+
+% -------- Eli Lilly --------
+\noindent
+{\normalsize\textbf{Eli Lilly}} \hfill \small{\textbf{Data Platform - Distributed Systems}} \\
+{Global top 10 - \$1T Valuation. \hfill Aug 2023 -- Present}
+
+\begin{itemize}
+
+\item Decomposed monolithic \textbf{notification and insurance claim processing} platform into an high-throughput \textbf{event-driven SOA architecture} (\textbf{API event trigger → APScheduler → RabbitMQ → SOA workers → RPC calls}),
+  enabling \textbf{independent scaling} of \textbf{batch and real-time processing} across \textbf{5,000--10,000 daily transactions}.
+
+  \item  Architected and owned a production \textbf{LangGraph multi-agent AI system} serving \textbf{100+ engineers}, enabling \textbf{natural-language-driven IAM and database provisioning} across \textbf{72 research data domains with petabyte-scale}; integrated \textbf{FAISS-backed RAG} and a \textbf{human-in-the-loop approval gate} auto-escalating \textbf{30\% of high-privilege requests} --- governing \textbf{500+ access grants} and reducing \textbf{time-to-access
+  ▎ from 3--5 days to under 10 minutes}.
+
+  \item Contributed to \textbf{Research Data Platform} using \textbf{Spring Boot} and \textbf{Neo4j}-backed \textbf{data catalog} and \textbf{lineage tracking system} that manages \textbf{research data assets}, their versions,
+  schemas, and provenance relationships through \textbf{gRPC APIs}.
+
+  \item Delivered \textbf{SOLID-compliant} backend services using \textbf{ multiple design patterns} to enable \textbf{encrypted Oracle connectivity} via \textbf{wallet-based authentication}.
+
+\item Architected a \textbf{multi-tenant PostgreSQL FDW platform} federating \textbf{47 database instances across 5 engines} into a \textbf{unified query interface} --- eliminating \textbf{2-hour batch ETL lag} for real-time
+  ▎ cross-database access, eliminating \textbf{recurring password failures} via automated credential rotation, removing pipeline maintenance overhead, and reducing \textbf{service downtime to zero}.
+
+  \item \textbf{Built} a \textbf{fault-tolerant observability and alerting pipeline} using \textbf{CloudWatch}, \textbf{SNS}, \textbf{Lambda}, and \textbf{CloudFormation} to monitor 200+ database instance logs reducing \textbf{MTTR by 40\%}.
+
+  \item Integrated \textbf{schema validation} using \textbf{Pydantic}, reducing \textbf{errors caused by malformed inputs by over 30\%}.
+
+\end{itemize}
+
+\vspace{6pt}
+
+% -------- Amadeus --------
+\noindent
+{\normalsize\textbf{Amadeus IT Group}} \hfill \small{\textbf{Software Development Engineer II – Distributed Systems}} \\
+{World’s largest GDS with over 4 billion transaction annually. \hfill Jan 2022 -- Aug 2023}
+
+\begin{itemize}
+\item \textbf{Led components of a high-throughput affiliate deeplinking and e‑commerce tracking platform}, supporting \textbf{5k QPS} (bursts up to \textbf{15k+ QPS}), processing \textbf{120k+ deeplinks/month} and \textbf{50k+ transactions/month} across \textbf{50+ airline partners}, tracking reliability using first- and third-party cookies.
+
+\item Implemented \textbf{airline web scrapers} to extract routes and price
+details and feed normalized parameters into deeplink generation for affiliate sites - \textbf{Google Flights, Expedia, Skyscanner, Kayak}.}
+
+\item \textbf{Designed an adapter-based integration architecture} supporting \textbf{25+ airline booking systems}, reducing per-partner code from \textbf{800+ LOC to \< 300 LOC}.
+
+\item \textbf{Implemented Protobuf-based message serialization}, reducing payload size by \textbf{65\%} compared to
+JSON and enabling \textbf{3$\times$ faster response times} for partners \textbf{(Etihad, Qatar Airways etc)}.
+
+\end{itemize}
+
+\vspace{40pt}
+
+% -------- Zeomega --------
+\noindent
+{\normalsize\textbf{Zeomega}} \hfill \small{Senior Software Developer – Distributed Systems} \\
+{Patient Health Management - US Healthcare. \hfill Apr 2017 -- Jan 2022}
+
+\begin{itemize}
+\item \textbf{Built event driven data processing and rule-execution engine} processing \textbf{10M+ events/day}, improving \textbf{p95 latency by 35\%} through \textbf{AST-based execution, shortcircuiting, and race-condition elimination}.
+
+\item \textbf{Engineered }production-grade\textbf{ RabbitMQ AMQP infrastructure} processing \textbf{12k--18k messages/hour}, implementing publishers and consumers with \textbf{heartbeat and blocked-connection handling}, using the \textbf{Singleton design pattern} to prevent memory leaks, automating broker provisioning (virtual hosts, exchanges, queues) via \textbf{Python and shell scripts}, and upgrading \textbf{Pika to TLS 1.2/SSL} for secure messaging.
+
+\item \textbf Utilized \textbf{SQLAlchemy ORM} for efficient database interactions, ensuring data integrity for modules like patient records, document management (including SharePoint integration), and billing systems.
+
+\item \textbf{Built UI and API automation} using \textbf{Node.js}, \textbf{Protractor}, and \textbf{Jasmine}.
+\end{itemize}
+
+
+
+
+\section*{\textbf{Projects}}
+
+\noindent\textbf{Event-Driven Architecture Framework}
+\begin{itemize}
+  \item \textbf{Designed} an \textbf{event-driven system} using the \textbf{Observer design pattern} and \textbf{decorators} to dynamically inject \textbf{SQL parameters} from API requests.
+  \item \textbf{Eliminated injection risks} by replacing \textbf{eval()} with \textbf{AST-based evaluation}, preventing unsafe code execution.
+  \item \textbf{Prevented infinite event loops} and \textbf{resolved race conditions} using custom decorators and \textbf{semaphores}.
+  \item \textbf{Improved query execution performance} by \textbf{~30\%} using optimized logic and \textbf{Python short-circuiting}.
+\end{itemize}
+\vspace{6pt}
+
+\noindent\textbf{Service-Oriented Architecture Framework}
+\begin{itemize}
+  \item \textbf{Built} a \textbf{configurable SOA framework} enabling users to define custom execution rules for APIs.
+  \item Supported both \textbf{synchronous} and \textbf{asynchronous XML-RPC calls}, enabling dynamic runtime control.
+  \item \textbf{Reduced remote API invocation latency} by \textbf{~25\%} through efficient routing and caching.
+\end{itemize}
+\vspace{6pt}
+
+\noindent\textbf{Job Scheduling Microservice}
+\begin{itemize}
+  \item \textbf{Developed} a \textbf{modular job scheduler microservice} using \textbf{Python APScheduler}.
+  \item Leveraged both \textbf{ThreadPoolExecutor} and \textbf{ProcessPoolExecutor} to \textbf{improve parallel task throughput} by \textbf{~40\%}.
+  \item \textbf{Reduced queuing delays} under high load and implemented \textbf{observability}, execution logging, and failure recovery mechanisms.
+\end{itemize}
+
+
+\end{document}

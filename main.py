@@ -16,11 +16,16 @@ def main():
         agent = LinkedInJobScraper()
         df = agent.search_jobs(job_role=args.job_role, company=args.company)
         if not df.empty:
-            print(f"\n{'='*100}")
-            print(f"{'SEARCH RESULTS':^100}")
-            print(f"{'='*100}")
-            print(df[['serial_number', 'job_title', 'company', 'location']].to_string(index=False))
-            print(f"{'='*100}\n")
+            print(f"\n{'='*120}")
+            print(f"{'SEARCH RESULTS (External Apply Only)':^120}")
+            print(f"{'='*120}")
+            # Show job details with company URL truncated for display
+            display_df = df[['serial_number', 'job_title', 'company', 'location']].copy()
+            print(display_df.to_string(index=False))
+            print(f"{'='*120}")
+            print(f"Total jobs found: {len(df)}")
+            print(f"Note: Easy Apply jobs excluded. Company career URLs will be fetched when you run tailor_resume.")
+            print(f"{'='*120}\n")
 
     elif args.command == 'tailor_resume':
         if not args.serial_number:

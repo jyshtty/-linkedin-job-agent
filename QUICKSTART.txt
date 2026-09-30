@@ -1,0 +1,85 @@
+================================================================================
+                    🚀 AUTOMATED PDF COMPILATION - QUICK START
+================================================================================
+
+I've created MULTIPLE automated solutions for you. Pick ONE:
+
+================================================================================
+METHOD 1: BROWSER AUTOMATION (Running Now!)
+================================================================================
+✅ CURRENTLY RUNNING IN BACKGROUND!
+
+What it's doing:
+1. Opening Chrome browser
+2. Logging into Overleaf (you may need to auth first time)
+3. Uploading your .tex file
+4. Downloading compiled PDF
+
+Status: Check tailored_resume/ folder for PDF in ~30-60 seconds
+
+For next time:
+  python overleaf_auto_compiler.py "tailored_resume/yourfile.tex"
+
+================================================================================
+METHOD 2: SMART BASH SCRIPT (Tries Everything)
+================================================================================
+Tries pdflatex → Docker → Overleaf in that order
+
+Usage:
+  ./auto_compile_resume.sh "tailored_resume/yourfile.tex"
+
+Requires: ONE of (pdflatex OR Docker OR neither for Overleaf fallback)
+
+================================================================================
+METHOD 3: WEB INTERFACE (Easiest Manual Method)  
+================================================================================
+Beautiful web page with one-click upload
+
+Usage:
+  open open_in_overleaf.html
+
+Then: Click button → Upload .tex → Download PDF (takes 5 seconds)
+
+================================================================================
+METHOD 4: INSTALL LATEX LOCALLY (Best Long-term Solution)
+================================================================================
+One-time setup, then instant PDF generation forever
+
+Install:
+  brew install --cask basictex
+  sudo tlmgr install newtx enumitem titlesec setspace
+
+Then run resume tailor normally:
+  python main.py tailor_resume 8
+
+PDFs will auto-generate!
+
+================================================================================
+YOUR TAILORED RESUMES
+================================================================================
+Ready to compile:
+
+1. Job #1 - GitLab DevOps @ Luxoft (72% match)
+   tailored_resume/Luxoft_1_devops-engineer-gitlab-enterprise-at-luxoft-4469134309_NA.tex
+
+2. Job #8 - Azure DevOps @ TCS (62% match)
+   tailored_resume/Tata_Consultancy_Services_8_azure-devops-engineer-terraform-%2B-kubernetes-at-tata-consultancy-services-4469102982_NA.tex
+
+================================================================================
+WHAT TO DO RIGHT NOW
+================================================================================
+The browser automation is running! Just wait ~30-60 seconds.
+
+OR try this for instant results:
+  ./auto_compile_resume.sh "tailored_resume/Tata_Consultancy_Services_8_*.tex"
+
+OR open the web interface:
+  open open_in_overleaf.html
+
+================================================================================
+NEED HELP?
+================================================================================
+Read: AUTOMATION_README.md (full guide with all options)
+Read: COMPILE_LATEX.md (detailed LaTeX installation guide)
+
+================================================================================

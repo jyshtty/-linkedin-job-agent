@@ -1,12 +1,17 @@
 import os
 import pandas as pd
 import PyPDF2
-import anthropic
+from openai import AzureOpenAI
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
 import json
 import re
 from linkedin_scraper import LinkedInJobScraper
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 
 class ResumeTailor:
@@ -14,16 +19,30 @@ class ResumeTailor:
 
     def __init__(self):
         load_dotenv()
-        self.anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
-        if not self.anthropic_api_key:
-            raise ValueError("ANTHROPIC_API_KEY not found in .env file")
 
-        self.client = anthropic.Anthropic(api_key=self.anthropic_api_key)
+        # Load DIAL API credentials
+        dial_api_key = os.getenv('DIAL_API_KEY')
+        azure_endpoint = os.getenv('AZURE_ENDPOINT')
+        api_version = os.getenv('API_VERSION')
+        self.deployment_name = os.getenv('DEPLOYMENT_NAME')
+
+        if not dial_api_key or not azure_endpoint:
+            raise ValueError("DIAL_API_KEY and AZURE_ENDPOINT not found in .env file")
+
+        # Initialize Azure OpenAI client
+        self.client = AzureOpenAI(
+            api_key=dial_api_key,
+            api_version=api_version,
+            azure_endpoint=azure_endpoint
+        )
         self.scraper = LinkedInJobScraper()
         self.searched_jobs_file = 'searched_job_list/searched_jobs.csv'
-        self.original_resume_path = 'original_resume/Ajay_resume.pdf'
+        self.original_resume_pdf = 'original_resume/Ajay_resume.pdf'
+        self.original_resume_tex = 'original_resume/Ajay_resume.tex'
         self.tailored_resume_dir = 'tailored_resume'
+        self.latex_dir = os.path.join(self.tailored_resume_dir, 'latex')
         os.makedirs(self.tailored_resume_dir, exist_ok=True)
+        os.makedirs(self.latex_dir, exist_ok=True)
 
     def _extract_pdf_text(self, pdf_path: str) -> str:
         """Extract text from PDF resume."""
@@ -78,13 +97,13 @@ Return ONLY a JSON object with this structure:
 }}
 """
 
-        message = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2000,
-            messages=[{"role": "user", "content": prompt}]
+        response = self.client.chat.completions.create(
+            model=self.deployment_name,
+            messages=[{"role": "user", "content": prompt}],
+            max_completion_tokens=2000
         )
 
-        response_text = message.content[0].text
+        response_text = response.choices[0].message.content
         # Extract JSON from response
         json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
         if json_match:
@@ -116,13 +135,13 @@ Return ONLY a JSON array of 2 bullet points:
 ]
 """
 
-        message = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1000,
-            messages=[{"role": "user", "content": prompt}]
+        response = self.client.chat.completions.create(
+            model=self.deployment_name,
+            messages=[{"role": "user", "content": prompt}],
+            max_completion_tokens=1000
         )
 
-        response_text = message.content[0].text
+        response_text = response.choices[0].message.content
         json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
         if json_match:
             bullets = json.loads(json_match.group())
@@ -151,13 +170,13 @@ Return ONLY a JSON array of section names or specific experiences to remove:
 If nothing should be removed, return an empty array: []
 """
 
-        message = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1000,
-            messages=[{"role": "user", "content": prompt}]
+        response = self.client.chat.completions.create(
+            model=self.deployment_name,
+            messages=[{"role": "user", "content": prompt}],
+            max_completion_tokens=1000
         )
 
-        response_text = message.content[0].text
+        response_text = response.choices[0].message.content
         json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
         if json_match:
             sections = json.loads(json_match.group())
@@ -165,84 +184,151 @@ If nothing should be removed, return an empty array: []
         else:
             return []
 
-    def _generate_latex_resume(self, resume_text: str, job_description: str,
-                               sections_to_remove: List[str], new_bullets: List[str],
-                               output_filename: str) -> str:
-        """Generate tailored LaTeX resume based on Overleaf template."""
-        prompt = f"""You are an expert LaTeX resume writer using Overleaf templates.
+    def _generate_tailored_latex(self, analysis: Dict, new_bullets: List[str],
+                                output_filename: str, job_info: Dict) -> str:
+        """Generate tailored LaTeX resume using original template."""
 
-Generate a complete LaTeX resume file (.tex) that:
-1. Uses a professional Overleaf template (modern, ATS-friendly)
-2. Removes these sections/experiences: {sections_to_remove}
-3. Adds these new STAR format bullet points in the most relevant section: {new_bullets}
-4. Maintains the original resume structure and formatting
-5. Optimizes for the target job description
+        # Read original LaTeX template
+        with open(self.original_resume_tex, 'r') as f:
+            latex_content = f.read()
 
-Original Resume Content:
-{resume_text}
+        # Ask AI to tailor the LaTeX
+        prompt = f"""You are an expert LaTeX resume editor. I'm tailoring my resume for this job:
 
-Target Job Description:
-{job_description}
+Job Title: {job_info['job_title']}
+Company: {job_info['company']}
 
-Generate the COMPLETE LaTeX code for the resume. Start with \\documentclass and end with \\end{{document}}.
-Use the 'article' or 'resume' document class with professional formatting.
+Match Analysis:
+- Matching Skills: {', '.join(analysis.get('matching_skills', [])[:10])}
+- Missing Skills: {', '.join(analysis.get('missing_skills', [])[:10])}
+
+New STAR Bullets to Add:
+{chr(10).join(f"{i+1}. {bullet}" for i, bullet in enumerate(new_bullets))}
+
+Original LaTeX Resume:
+{latex_content}
+
+TASK:
+1. In the Skills section, ADD these missing skills: {', '.join(analysis.get('missing_skills', [])[:5])}
+2. Add the new STAR bullets to the MOST RELEVANT experience section (Eli Lilly is most recent)
+3. REMOVE or reduce emphasis on experiences least relevant to DevOps/GitLab (keep structure intact)
+4. Keep ALL formatting, packages, colors, and structure EXACTLY the same
+5. Do NOT change name, contact info, or education
+6. Return ONLY the complete LaTeX code, no explanations
+
+Return the FULL modified LaTeX document from \\documentclass to \\end{{document}}.
 """
 
-        message = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4000,
-            messages=[{"role": "user", "content": prompt}]
+        response = self.client.chat.completions.create(
+            model=self.deployment_name,
+            messages=[{"role": "user", "content": prompt}],
+            max_completion_tokens=8000
         )
 
-        latex_code = message.content[0].text
+        tailored_latex = response.choices[0].message.content
 
-        # Extract LaTeX code from markdown if wrapped
-        latex_match = re.search(r'```(?:latex)?\n(.*?)\n```', latex_code, re.DOTALL)
+        # Extract LaTeX from markdown code blocks if present
+        latex_match = re.search(r'```(?:latex|tex)?\n(.*?)\n```', tailored_latex, re.DOTALL)
         if latex_match:
-            latex_code = latex_match.group(1)
+            tailored_latex = latex_match.group(1)
 
-        # Save LaTeX file
-        tex_path = os.path.join(self.tailored_resume_dir, output_filename.replace('.pdf', '.tex'))
+        # Post-process: Fix common LaTeX issues
+        # 1. Replace excessive spacing with consistent 6pt
+        tailored_latex = tailored_latex.replace(r'\vspace{40pt}', r'\vspace{6pt}')
+        # 2. Fix escaped less-than sign
+        tailored_latex = tailored_latex.replace(r'\<', '<')
+
+        # Save tailored LaTeX in latex subdirectory
+        tex_filename = output_filename.replace('.pdf', '.tex')
+        tex_path = os.path.join(self.latex_dir, tex_filename)
         with open(tex_path, 'w') as f:
-            f.write(latex_code)
+            f.write(tailored_latex)
 
         return tex_path
 
-    def _compile_latex_to_pdf(self, tex_path: str) -> str:
-        """Compile LaTeX to PDF using pdflatex."""
+    def _compile_latex_to_pdf(self, tex_path: str) -> Optional[str]:
+        """Compile LaTeX to PDF using tectonic, pdflatex, or Docker fallback."""
         import subprocess
 
-        try:
-            # Run pdflatex twice for proper references
-            for _ in range(2):
-                result = subprocess.run(
-                    ['pdflatex', '-interaction=nonstopmode', '-output-directory',
-                     self.tailored_resume_dir, tex_path],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
+        # PDF should go to tailored_resume/, not latex/
+        tex_filename = os.path.basename(tex_path)
+        pdf_filename = tex_filename.replace('.tex', '.pdf')
+        pdf_path = os.path.join(self.tailored_resume_dir, pdf_filename)
 
-            pdf_path = tex_path.replace('.tex', '.pdf')
+        # Try Tectonic first (modern, single-binary LaTeX compiler)
+        try:
+            # Tectonic outputs PDF in the same directory as .tex by default
+            result = subprocess.run(
+                ['tectonic', tex_path],
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+
+            # Tectonic creates PDF in same dir as .tex, need to move it
+            temp_pdf = tex_path.replace('.tex', '.pdf')
+            if os.path.exists(temp_pdf):
+                # Move PDF from latex/ to tailored_resume/
+                os.rename(temp_pdf, pdf_path)
+                print("   ✅ Compiled via Tectonic!")
+                return pdf_path
+
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+
+        # Try local pdflatex second
+        try:
+            # pdflatex can output directly to tailored_resume_dir
+            result = subprocess.run(
+                ['pdflatex', '-interaction=nonstopmode', '-output-directory',
+                 self.tailored_resume_dir, tex_path],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
 
             if os.path.exists(pdf_path):
-                print(f"✓ PDF generated: {pdf_path}")
+                # Clean up auxiliary files in tailored_resume dir
+                for ext in ['.aux', '.log', '.out']:
+                    aux_file = os.path.join(self.tailored_resume_dir, pdf_filename.replace('.pdf', ext))
+                    if os.path.exists(aux_file):
+                        os.remove(aux_file)
+                print("   ✅ Compiled via pdflatex!")
+                return pdf_path
+
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+
+        # Try Docker as last resort
+        try:
+            print("   Trying Docker LaTeX container...")
+            tex_filename = os.path.basename(tex_path)
+            tex_dirname = os.path.dirname(os.path.abspath(tex_path))
+
+            result = subprocess.run(
+                ['docker', 'run', '--rm',
+                 '-v', f'{tex_dirname}:/workdir',
+                 '-w', '/workdir',
+                 'texlive/texlive:latest',
+                 'pdflatex', '-interaction=nonstopmode', tex_filename],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+
+            if os.path.exists(pdf_path):
                 # Clean up auxiliary files
                 for ext in ['.aux', '.log', '.out']:
                     aux_file = tex_path.replace('.tex', ext)
                     if os.path.exists(aux_file):
                         os.remove(aux_file)
+                print("   ✅ Compiled via Docker!")
                 return pdf_path
-            else:
-                print(f"✗ PDF compilation failed. Check {tex_path}")
-                return None
 
-        except subprocess.TimeoutExpired:
-            print("✗ LaTeX compilation timed out")
-            return None
-        except FileNotFoundError:
-            print("✗ pdflatex not found. Install LaTeX: brew install --cask mactex")
-            return None
+        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
+            pass
+
+        return None
 
     def tailor_resume(self, serial_number: int) -> Optional[str]:
         """Main function to tailor resume for a specific job."""
@@ -270,11 +356,16 @@ Use the 'article' or 'resume' document class with professional formatting.
             print("⚠️  Could not fetch full job description. Using basic info for tailoring.")
             job_description = f"Job Title: {job['job_title']}\nCompany: {job['company']}\nLocation: {job['location']}"
 
+        print(f"🔗 Company Career Page: {company_apply_link}")
+        if company_apply_link == 'EASY_APPLY':
+            print("⚠️  This is an Easy Apply job (no external career page)")
+        elif company_apply_link != 'N/A':
+            print(f"   Job ID on company site: {company_job_id}")
         print()
 
         # Extract resume text
         print("📄 Reading original resume...")
-        resume_text = self._extract_pdf_text(self.original_resume_path)
+        resume_text = self._extract_pdf_text(self.original_resume_pdf)
 
         # Calculate match percentage
         print("🔍 Analyzing match with job description...")
@@ -307,21 +398,20 @@ Use the 'article' or 'resume' document class with professional formatting.
         for i, bullet in enumerate(new_bullets, 1):
             print(f"   {i}. {bullet}")
 
-        # Generate output filename
+        # Generate output filename (sanitize for filesystem)
         company_name = job['company'].replace(' ', '_').replace('/', '_')
-        output_filename = f"{company_name}_{serial_number}_{job['linkedin_job_id']}_{company_job_id}.pdf"
+        safe_job_id = company_job_id.replace('/', '_').replace('\\', '_') if company_job_id != 'N/A' else 'NA'
+        output_filename = f"{company_name}_{serial_number}_{job['linkedin_job_id']}_{safe_job_id}.pdf"
 
-        # Generate LaTeX resume
-        print(f"\n📝 Generating tailored resume...")
-        tex_path = self._generate_latex_resume(
-            resume_text,
-            job_description,
-            sections_to_remove,
+        # Generate tailored LaTeX
+        print(f"\n📝 Generating tailored LaTeX resume...")
+        tex_path = self._generate_tailored_latex(
+            analysis,
             new_bullets,
-            output_filename
+            output_filename,
+            job
         )
 
-        # Compile to PDF
         print("🔨 Compiling LaTeX to PDF...")
         pdf_path = self._compile_latex_to_pdf(tex_path)
 
@@ -333,6 +423,36 @@ Use the 'article' or 'resume' document class with professional formatting.
         else:
             print(f"\n{'='*80}")
             print(f"⚠️  LaTeX file created: {tex_path}")
-            print(f"   Compile manually: pdflatex {tex_path}")
+            print(f"\n💡 Attempting automated Overleaf compilation...")
+            print(f"{'='*80}\n")
+
+            # Try automated Overleaf compilation
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ['python', 'overleaf_auto_compiler.py', tex_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=180
+                )
+
+                expected_pdf = tex_path.replace('.tex', '.pdf')
+                if os.path.exists(expected_pdf):
+                    print(f"\n✅ SUCCESS via Overleaf automation!")
+                    return expected_pdf
+
+            except Exception as e:
+                print(f"⚠️  Automated compilation not available: {e}")
+
+            print(f"\n{'='*80}")
+            print(f"📋 MANUAL COMPILATION OPTIONS:")
+            print(f"{'='*80}")
+            print(f"1. Automated (Recommended):")
+            print(f"   python overleaf_auto_compiler.py {tex_path}")
+            print(f"\n2. Web Interface:")
+            print(f"   open open_in_overleaf.html")
+            print(f"\n3. Install LaTeX locally:")
+            print(f"   brew install --cask basictex")
+            print(f"   Then: cd {self.tailored_resume_dir} && pdflatex {os.path.basename(tex_path)}")
             print(f"{'='*80}\n")
             return tex_path

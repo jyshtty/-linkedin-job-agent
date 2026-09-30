@@ -1,0 +1,92 @@
+================================================================================
+                    LATEX RESUME COMPILATION GUIDE
+================================================================================
+
+WHY PDF WASN'T AUTO-GENERATED:
+-------------------------------
+The resume tailor successfully created tailored .tex files but couldn't compile 
+them to PDF because:
+
+1. ❌ pdflatex (LaTeX compiler) not installed on your system
+2. ❌ No package managers (Homebrew/MacPorts) available  
+3. ❌ Docker not installed
+4. ❌ Free online LaTeX APIs have size limits or require authentication
+
+================================================================================
+
+SOLUTION - USE THE WEB INTERFACE:
+----------------------------------
+I've created an HTML helper page that just opened in your browser!
+
+✅ Steps:
+1. Click "Open in Overleaf" button for any resume
+2. Sign up/login to Overleaf (free)
+3. Upload the .tex file when prompted  
+4. Wait 2-3 seconds for auto-compilation
+5. Download your PDF!
+
+================================================================================
+
+YOUR TAILORED RESUMES:
+----------------------
+Location: tailored_resume/
+
+1. Job #1 - GitLab DevOps @ Luxoft (72% match)
+   File: Luxoft_1_devops-engineer-gitlab-enterprise-at-luxoft-4469134309_NA.tex
+   
+2. Job #8 - Azure DevOps @ TCS (62% match)  
+   File: Tata_Consultancy_Services_8_azure-devops-engineer-terraform-%2B-kubernetes-at-tata-consultancy-services-4469102982_NA.tex
+
+================================================================================
+
+ALTERNATIVE - INSTALL LATEX LOCALLY (One-time):
+------------------------------------------------
+For future automation, install BasicTeX:
+
+# Install Homebrew first
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install BasicTeX  
+brew install --cask basictex
+
+# Install required packages
+sudo tlmgr update --self
+sudo tlmgr install newtx enumitem titlesec setspace
+
+# Then compile:
+cd tailored_resume
+pdflatex filename.tex
+
+================================================================================
+
+WHAT CHANGED IN YOUR RESUMES:
+------------------------------
+
+Job #8 (Azure DevOps - 62% match) - Most changes:
+✅ Added Skills: Terraform, Azure DevOps, Azure CLI, AKS, Helm
+✅ 5 New STAR bullets focused on:
+   - Terraform IaC implementation (reduced setup 3 days → 1 hour)
+   - CloudFormation to Terraform migration  
+   - GitOps & Helm pipelines (60% faster deployments)
+   - AKS operations & monitoring
+   - Azure Key Vault integration
+
+Job #1 (GitLab - 72% match):  
+✅ Added Skills: GitLab CI, Terraform, Ansible, LDAP/AD integration
+✅ 5 New STAR bullets focused on:
+   - GitLab Enterprise administration (99.95% uptime)
+   - CI/CD optimization (40% faster, 30% cheaper)
+   - IaC automation (days → <1 hour)
+   - Enterprise SSO (500+ users, 2 hours onboarding)
+   - Secure migrations (200+ repos, zero incidents)
+
+================================================================================
+
+NEXT STEPS:
+-----------
+1. ✅ Open the HTML page (already opened)
+2. ✅ Click "Open in Overleaf" for your target job  
+3. ✅ Upload .tex file and download PDF
+4. ✅ Apply to the job with your tailored resume!
+
+================================================================================
