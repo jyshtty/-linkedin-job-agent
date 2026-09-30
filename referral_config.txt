@@ -1,0 +1,7 @@
+# Referral Agent Configuration
+# Number of referral requests to send per job
+referrals_per_job=2
+
+# Your professional summary (for template)
+your_title=Senior Software Engineer
+your_expertise=DSA and System Design

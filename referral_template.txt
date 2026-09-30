@@ -1,0 +1,11 @@
+Hi {name},
+
+I'm a {your_title} with strong expertise in {your_expertise}.
+
+I've been following {company} and would love to be part of the team — would you be open to referring me for the {job_title} position?
+
+Job link: {job_link}
+
+Even a referral submission makes a huge difference — really appreciate any help!
+
+Best regards
