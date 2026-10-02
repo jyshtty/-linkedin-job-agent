@@ -123,10 +123,10 @@ Best regards"""
             driver.get("https://www.linkedin.com/login")
             time.sleep(3)
 
-            # Enter email with explicit wait
+            # Find email field by type (LinkedIn uses random IDs)
             try:
                 email_field = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.ID, "username"))
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='email']"))
                 )
                 email_field.clear()
                 email_field.send_keys(self.linkedin_email)
@@ -135,10 +135,10 @@ Best regards"""
                 print("   ✗ Could not find email field")
                 return False
 
-            # Enter password with explicit wait
+            # Find password field by type (LinkedIn uses random IDs)
             try:
                 password_field = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.ID, "password"))
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='password']"))
                 )
                 password_field.clear()
                 password_field.send_keys(self.linkedin_password)
@@ -147,7 +147,7 @@ Best regards"""
                 print("   ✗ Could not find password field")
                 return False
 
-            # Click login button
+            # Find and click login button
             try:
                 login_button = WebDriverWait(driver, 10).until(
                     EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']"))
