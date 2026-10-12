@@ -1,5 +1,87 @@
 # Release Notes
 
+## v0.2.0 — 2026-10-12
+
+Adds a web UI and resumable batch runs. Tailoring and referrals can now be worked
+through the job list a batch at a time, each batch picking up where the last one
+stopped.
+
+### Commands
+
+```bash
+./run_ui.sh          # open the UI at http://localhost:8000
+./run_ui.sh dev      # hot reload while editing the UI (http://localhost:5173)
+
+python batch.py tailor   [--size 10]
+python batch.py referral [--messages 10] [--max-jobs 25] [--dry-run] [--allow-company-repeats]
+python batch.py status | reset <tailor|referral> [--serial N] | stop <tailor|referral>
+```
+
+The existing `main.py` commands work as before.
+
+### New
+
+- **Web UI** (`ui/`, React + TypeScript), served by a local API (`api/server.py`, FastAPI)
+  - **Search Agent:** search all interested companies or only the ones you tick;
+    pick roles from `job_role.txt` or add new ones. **Start flow** runs a search,
+    then a tailor batch, then a referral batch, after asking you to confirm.
+  - **Tailor Resume Agent** and **Send Referral Agent:** act on the row selected
+    in the job table. Referrals can be sent as a dry run.
+  - **Job table:** filter by company, title, location or job ID. Each row shows
+    whether the job has a tailored resume, who has been messaged about it, and
+    where each batch stopped.
+  - **Activity log:** live output of every run, with **Stop** (finishes the current
+    person or job first) and **Force stop**.
+  - Tasks that control Chrome never run at the same time. Tailoring doesn't use
+    Chrome, so a tailor batch can run alongside a referral batch.
+- **Batch runs** (`batch.py`)
+  - **Tailor batch:** tailors resumes for the next N jobs (default 10), one after
+    another with no waits. It skips jobs that already have a tailored resume.
+  - **Referral batch:** sends up to 10 messages per batch, checking at most 25 jobs.
+    If the message limit is reached partway through a job, the next batch finishes
+    that job first.
+  - Each batch shows **"Batch stopped at sl no ⇒ N"** and continues from there next
+    time. The position is saved after every job in `batch_state.json`, by LinkedIn
+    job ID, so it survives the job list being renumbered. You can restart from the
+    top or continue after any serial number.
+  - If a job fails (for example the AI service is down), the batch stops and retries
+    that job next time instead of skipping it.
+  - `batch.tailor_job(serial)` tailors a single job on its own, ready to be called
+    from a queue worker (e.g. Kafka) later.
+
+### Changed
+
+- **Referrals**
+  - People already messaged about a job now count toward `referrals_per_job`, so
+    rerunning a job doesn't message extra people.
+  - Option to skip people asked about **any job at the same company** in the last
+    30 days. It's on by default for referral batches.
+  - `referral_log.csv` now records each job's LinkedIn job ID, so the log no longer
+    depends on serial numbers. Older logs are upgraded automatically.
+- **Resume tailoring** uses the company link and job ID already saved in
+  `searched_jobs.csv`, so it no longer needs Chrome. Batches skip the slow
+  browser-based Overleaf fallback.
+- **Job search** accepts a list of companies, not only "all" or one.
+- **New dependencies:** `fastapi` and `uvicorn`. The UI also needs Node.js;
+  `run_ui.sh` installs its packages the first time.
+
+### Fixed
+
+- These known limitations from v0.1.0 are resolved:
+  - the same person being asked about several jobs at one company
+  - the referral log being keyed by serial number
+
+### Known limitations
+
+- **Tailoring needs the AI service.** It uses the endpoint in `.env`
+  (`ai-proxy.lab.epam.com`), which needs the EPAM VPN. Without it, tailoring stops
+  at the match-analysis step, and tailoring from the UI hasn't yet produced a
+  resume end to end.
+- **Wrong people can be messaged.** The people search still matches the company by
+  keyword, so it can pick someone who mentions the company but doesn't work there now.
+- **Not tested end to end yet:** sending referrals from the UI, a full referral
+  batch, and Start flow.
+
 ## v0.1.0 — 2026-10-12
 
 First tagged release. Searches jobs at your interested companies, tailors your
