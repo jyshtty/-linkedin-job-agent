@@ -19,7 +19,7 @@ import re
 import subprocess
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import quote
 
 import pandas as pd
@@ -27,6 +27,9 @@ import pandas as pd
 from apply_link_resolver import SKIP_REASONS, numeric_job_id, resolved_job
 
 LOG_FILE = 'referral_log.csv'
+LOG_COLUMNS = ['timestamp', 'job_serial', 'company', 'job_title', 'employee_name', 'employee_title',
+               'profile_link', 'sent', 'linkedin_job_id']
+COMPANY_COOLDOWN_DAYS = 30
 TAILORED_RESUME_DIR = 'tailored_resume'
 ORIGINAL_RESUME_DIR = 'original_resume'
 MAX_PAGES = 5
@@ -57,6 +60,23 @@ on run argv
             return id of t
         end tell
     end tell
+end run
+'''
+
+CLOSE_TAB_SCRIPT = '''
+on run argv
+    set tid to (item 1 of argv)
+    tell application "Google Chrome"
+        repeat with w in windows
+            repeat with t in tabs of w
+                if ((id of t) as text) is tid then
+                    close t
+                    return "ok"
+                end if
+            end repeat
+        end repeat
+    end tell
+    return "__NO_TAB__"
 end run
 '''
 
@@ -313,6 +333,9 @@ class Chrome:
     def focus(self):
         self._osascript(FOCUS_TAB_SCRIPT, self.tab_id)
 
+    def close(self):
+        self._osascript(CLOSE_TAB_SCRIPT, self.tab_id)
+
 
 def wait_for(check, timeout, interval=1.0):
     """Poll check() until it returns something truthy or timeout expires."""
@@ -480,44 +503,78 @@ def message_person(chrome, candidate, message, resume, job_markers, dry_run):
     return 'sent'
 
 
-def load_log(serial_number):
-    """Profiles/names already handled for this job, so reruns don't double-message."""
+def _read_log():
     if not os.path.exists(LOG_FILE):
-        return set()
+        return pd.DataFrame(columns=LOG_COLUMNS)
     df = pd.read_csv(LOG_FILE, dtype=str).fillna('')
-    done = df[(df['job_serial'] == str(serial_number)) & (df['sent'].isin(['Yes', 'Already']))]
+    for col in LOG_COLUMNS:
+        if col not in df.columns:
+            df[col] = ''
+    return df
+
+
+def already_sent_count(job):
+    """How many people have already been messaged about this job."""
+    df = _read_log()
+    return int(((df['linkedin_job_id'] == numeric_job_id(job['linkedin_job_id'])) & (df['sent'] == 'Yes')).sum())
+
+
+def load_log(job):
+    """Profiles/names already handled for this job, so reruns don't double-message."""
+    df = _read_log()
+    linkedin_id = numeric_job_id(job['linkedin_job_id'])
+    # Older rows have no LinkedIn job ID; fall back to the serial number for those
+    same_job = (df['linkedin_job_id'] == linkedin_id) | \
+               ((df['linkedin_job_id'] == '') & (df['job_serial'] == str(job['serial_number'])))
+    done = df[same_job & df['sent'].isin(['Yes', 'Already'])]
+    return (set(done['profile_link']) | set(done['employee_name'])) - {''}
+
+
+def recent_company_contacts(company):
+    """People already asked about any job at this company in the last COMPANY_COOLDOWN_DAYS days."""
+    df = _read_log()
+    cutoff = (datetime.now() - timedelta(days=COMPANY_COOLDOWN_DAYS)).strftime('%Y-%m-%d %H:%M:%S')
+    done = df[(df['company'] == company) & (df['sent'] == 'Yes') & (df['timestamp'] >= cutoff)]
     return (set(done['profile_link']) | set(done['employee_name'])) - {''}
 
 
 def log_referral(job, candidate, status):
-    file_exists = os.path.exists(LOG_FILE)
     sent = {'sent': 'Yes', 'already_messaged': 'Already', 'dry_run': 'DryRun'}.get(status, 'No')
+    df = _read_log()
+    if os.path.exists(LOG_FILE) and list(pd.read_csv(LOG_FILE, nrows=0).columns) != LOG_COLUMNS:
+        df[LOG_COLUMNS].to_csv(LOG_FILE, index=False)  # upgrade an older log's header in place
+    file_exists = os.path.exists(LOG_FILE)
     with open(LOG_FILE, 'a', newline='') as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(['timestamp', 'job_serial', 'company', 'job_title',
-                             'employee_name', 'employee_title', 'profile_link', 'sent'])
+            writer.writerow(LOG_COLUMNS)
         writer.writerow([datetime.now().strftime('%Y-%m-%d %H:%M:%S'), job['serial_number'],
                          job['company'], job['job_title'], candidate['name'], '',
-                         candidate['profile'], sent])
+                         candidate['profile'], sent, numeric_job_id(job['linkedin_job_id'])])
 
 
-def run(serial_number, dry_run=False):
+def run(serial_number, dry_run=False, max_messages=None, skip_company_contacts=False, should_stop=None,
+        close_tab=False):
+    """
+    Message connections about one job. Returns {'status', 'sent'} where status is
+    'done', 'skipped' (job not usable), 'capped' (stopped at max_messages),
+    'stopped' (should_stop() said so) or 'error'.
+    """
     # Load job, with its company careers link
     job = resolved_job(serial_number)
     if job is None:
         print(f"❌ No job found with serial number {serial_number}")
-        return
+        return {'status': 'error', 'sent': 0}
     if job['apply_status'] != 'OK':
         print(f"\n⏭️  Skipping job #{serial_number} ({job['company']} - {job['job_title']}):")
         print(f"   {SKIP_REASONS.get(job['apply_status'], job['apply_status'])}. No messages sent.\n")
-        return
+        return {'status': 'skipped', 'sent': 0}
     job_markers = [job['company_career_url'], numeric_job_id(job['linkedin_job_id'])]
 
     resume_path, tailored = find_resume(job)
     if not resume_path:
         print(f"❌ No resume PDF found in {TAILORED_RESUME_DIR}/ or {ORIGINAL_RESUME_DIR}/")
-        return
+        return {'status': 'error', 'sent': 0}
     # Always attach under the original resume's clean file name
     originals = sorted(glob.glob(os.path.join(ORIGINAL_RESUME_DIR, '*.pdf')))
     resume = {'path': resume_path,
@@ -537,8 +594,16 @@ def run(serial_number, dry_run=False):
     with open('referral_template.txt', 'r') as f:
         template = f.read()
 
-    target = config['referrals_per_job']
-    done = load_log(serial_number)
+    # People already messaged about this job count toward referrals_per_job
+    previously_sent = already_sent_count(job)
+    wanted = max(config['referrals_per_job'] - previously_sent, 0)
+    target = wanted if max_messages is None else min(wanted, max_messages)
+    capped = target < wanted
+    if wanted == 0:
+        print(f"\n✅ Job #{serial_number} ({job['company']}) already has {previously_sent} referral requests. Nothing to send.\n")
+        return {'status': 'done', 'sent': 0}
+    done = load_log(job)
+    company_contacts = recent_company_contacts(job['company']) if skip_company_contacts else set()
 
     print(f"\n{'='*80}")
     print(f"🤖 REFERRAL AGENT - JOB #{serial_number}{'  (DRY RUN - nothing will be sent)' if dry_run else ''}")
@@ -548,9 +613,11 @@ def run(serial_number, dry_run=False):
     print(f"Company link: {job['company_career_url']}")
     print(f"Company job ID: {job['company_job_id']}")
     print(f"Resume: {resume_path} ({'tailored for this job' if tailored else 'default'})")
-    print(f"Target: {target} referrals")
+    print(f"Target: {target} referrals" + (f" ({previously_sent} already sent earlier)" if previously_sent else ""))
     if done:
         print(f"Skipping people already messaged for this job (see {LOG_FILE})")
+    if company_contacts:
+        print(f"Skipping {len(company_contacts)} people asked about {job['company']} in the last {COMPANY_COOLDOWN_DAYS} days")
     print(f"{'='*80}\n")
 
     # Step 1: Open LinkedIn search in a new tab of your existing Chrome
@@ -569,8 +636,13 @@ def run(serial_number, dry_run=False):
             break
 
         while sent < target:
+            if should_stop and should_stop():
+                print("⏹️  Stop requested, finishing here.")
+                if close_tab:
+                    chrome.close()
+                return {'status': 'stopped', 'sent': sent}
             candidates = [c for c in chrome.js(JS_LIST_CANDIDATES) or []
-                          if c['key'] not in tried and c['profile'] not in done and c['name'] not in done]
+                          if c['key'] not in tried and not ({c['profile'], c['name']} & (done | company_contacts))]
             if not candidates:
                 break
             candidate = candidates[0]
@@ -604,6 +676,9 @@ def run(serial_number, dry_run=False):
     if sent < target:
         print("   Not enough 1st-degree connections with a Message button at this company.")
     print(f"{'='*80}\n")
+    if close_tab:
+        chrome.close()
+    return {'status': 'capped' if capped and sent >= target else 'done', 'sent': sent}
 
 
 if __name__ == '__main__':
