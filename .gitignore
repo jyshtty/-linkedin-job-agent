@@ -71,3 +71,6 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Archived old experiments (review, then delete)
+_archive/

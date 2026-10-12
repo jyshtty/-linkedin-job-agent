@@ -7,11 +7,7 @@ from dotenv import load_dotenv
 import json
 import re
 from linkedin_scraper import LinkedInJobScraper
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
-from reportlab.lib.enums import TA_LEFT, TA_CENTER
+from apply_link_resolver import SKIP_REASONS
 
 
 class ResumeTailor:
@@ -356,11 +352,12 @@ Return the FULL modified LaTeX document from \\documentclass to \\end{{document}
             print("⚠️  Could not fetch full job description. Using basic info for tailoring.")
             job_description = f"Job Title: {job['job_title']}\nCompany: {job['company']}\nLocation: {job['location']}"
 
+        if job_details['apply_status'] != 'OK':
+            print(f"⏭️  Skipping: {SKIP_REASONS.get(job_details['apply_status'], job_details['apply_status'])}.")
+            return None
+
         print(f"🔗 Company Career Page: {company_apply_link}")
-        if company_apply_link == 'EASY_APPLY':
-            print("⚠️  This is an Easy Apply job (no external career page)")
-        elif company_apply_link != 'N/A':
-            print(f"   Job ID on company site: {company_job_id}")
+        print(f"   Job ID on company site: {company_job_id}")
         print()
 
         # Extract resume text
@@ -398,10 +395,10 @@ Return the FULL modified LaTeX document from \\documentclass to \\end{{document}
         for i, bullet in enumerate(new_bullets, 1):
             print(f"   {i}. {bullet}")
 
-        # Generate output filename (sanitize for filesystem)
-        company_name = job['company'].replace(' ', '_').replace('/', '_')
-        safe_job_id = company_job_id.replace('/', '_').replace('\\', '_') if company_job_id != 'N/A' else 'NA'
-        output_filename = f"{company_name}_{serial_number}_{job['linkedin_job_id']}_{safe_job_id}.pdf"
+        # Generate output filename (sanitize for filesystem): <Company>_<serial>_<company job ID>.pdf
+        company_name = re.sub(r'[^A-Za-z0-9._-]', '_', job['company'])
+        safe_job_id = re.sub(r'[^A-Za-z0-9._-]', '_', company_job_id)
+        output_filename = f"{company_name}_{serial_number}_{safe_job_id}.pdf"
 
         # Generate tailored LaTeX
         print(f"\n📝 Generating tailored LaTeX resume...")
