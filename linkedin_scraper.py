@@ -1,14 +1,19 @@
 import os
 import pandas as pd
 import requests
-from datetime import datetime, timedelta
 from typing import List, Optional
 from bs4 import BeautifulSoup
 import time
 
+import company_directory
+from apply_link_resolver import LinkedInSession, numeric_job_id, resolve
+
 
 class LinkedInJobScraper:
     """Scraper for LinkedIn public job search (no authentication needed)."""
+
+    COMPANIES_PER_SEARCH = 25  # company IDs per f_C filter
+    MAX_PAGES = 4  # 10 jobs per page
 
     def __init__(self):
         self.base_url = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
@@ -24,206 +29,163 @@ class LinkedInJobScraper:
         with open('interested_job_role/job_role.txt', 'r') as f:
             return [line.strip() for line in f if line.strip()]
 
-    def _get_company_apply_url(self, job_id: str) -> str:
-        """
-        Get the company career page URL for a job.
-        Returns 'EASY_APPLY' if it's an Easy Apply job.
-        Returns 'N/A' if no external apply link found.
-        """
-        try:
-            job_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
-            response = self.session.get(job_url)
-            response.raise_for_status()
-
-            soup = BeautifulSoup(response.text, 'html.parser')
-
-            # Check if it's Easy Apply
-            easy_apply_button = soup.find('button', string=lambda text: text and 'easy apply' in text.lower())
-            if easy_apply_button:
-                return 'EASY_APPLY'
-
-            # Look for external apply button/link
-            apply_button = soup.find('a', class_='apply-button')
-            if not apply_button:
-                apply_button = soup.find('a', {'data-tracking-control-name': 'public_jobs_apply-link-offsite'})
-            if not apply_button:
-                # Look for any link with "apply" text
-                apply_button = soup.find('a', string=lambda text: text and 'apply' in text.lower() and 'easy' not in text.lower())
-
-            if apply_button:
-                company_url = apply_button.get('href', 'N/A')
-                # Filter out LinkedIn Easy Apply URLs
-                if 'linkedin.com/job-apply' in company_url or 'linkedin.com/jobs/apply' in company_url:
-                    return 'EASY_APPLY'
-                return company_url
-
-            return 'N/A'
-
-        except Exception as e:
-            print(f"   Error checking apply type for job {job_id}: {str(e)}")
-            return 'N/A'
-
     def fetch_job_details(self, job_id: str) -> dict:
         """
         Fetch full job details including company apply link and job description.
         This is a public method to be called on-demand (e.g., by tailor_resume).
         """
-        try:
-            # Extract numeric job ID from slug format (e.g., "lead-engineer-at-target-4469431197" -> "4469431197")
-            import re
-            numeric_id_match = re.search(r'(\d+)$', job_id)
-            numeric_job_id = numeric_id_match.group(1) if numeric_id_match else job_id
+        link = resolve(job_id, LinkedInSession())
 
-            job_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{numeric_job_id}"
+        job_description = 'N/A'
+        try:
+            job_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{numeric_job_id(job_id)}"
             response = self.session.get(job_url)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, 'html.parser')
-
-            # Extract company apply link (external career page URL)
-            apply_link_tag = soup.find('a', class_='apply-button')
-            if not apply_link_tag:
-                apply_link_tag = soup.find('a', {'data-tracking-control-name': 'public_jobs_apply-link-offsite'})
-            if not apply_link_tag:
-                # Look for any external apply link
-                apply_link_tag = soup.find('a', string=lambda text: text and 'apply' in text.lower() and 'easy' not in text.lower())
-
-            company_apply_link = apply_link_tag.get('href', 'N/A') if apply_link_tag else 'N/A'
-
-            # Skip if it's an Easy Apply link
-            if company_apply_link != 'N/A' and ('linkedin.com/job-apply' in company_apply_link or 'linkedin.com/jobs/apply' in company_apply_link):
-                company_apply_link = 'EASY_APPLY'
-
-            # Extract company job ID from apply link if available
-            company_job_id = 'N/A'
-            if company_apply_link != 'N/A':
-                # Try to extract job ID from URL patterns
-                import re
-                # Common patterns: /jobs/12345, jobId=12345, job-12345, etc.
-                patterns = [
-                    r'/jobs?[/-](\w+)',
-                    r'jobId[=:](\w+)',
-                    r'job[_-]id[=:](\w+)',
-                    r'posting[_-]?id[=:](\w+)',
-                    r'requisition[_-]?id[=:](\w+)'
-                ]
-                for pattern in patterns:
-                    match = re.search(pattern, company_apply_link, re.IGNORECASE)
-                    if match:
-                        company_job_id = match.group(1)
-                        break
-
-            # Extract job description
             desc_tag = soup.find('div', class_='description')
             if not desc_tag:
                 desc_tag = soup.find('div', class_='show-more-less-html__markup')
-
-            job_description = desc_tag.get_text(strip=True) if desc_tag else 'N/A'
-
-            return {
-                'company_apply_link': company_apply_link,
-                'company_job_id': company_job_id,
-                'job_description': job_description
-            }
-
+            if desc_tag:
+                job_description = desc_tag.get_text(strip=True)
         except Exception as e:
-            print(f"Warning: Could not fetch full job details for {job_id}: {str(e)}")
-            print("Proceeding with basic job information...")
-            return {
-                'company_apply_link': 'N/A',
-                'company_job_id': 'N/A',
-                'job_description': 'N/A'
-            }
+            print(f"Warning: Could not fetch job description for {job_id}: {str(e)}")
+
+        if job_description == 'N/A' and link['description']:
+            job_description = link['description']
+
+        return {
+            'apply_status': link['apply_status'],
+            'company_apply_link': link['company_career_url'],
+            'company_job_id': link['company_job_id'],
+            'job_description': job_description
+        }
+
+    def _parse_job_cards(self, html: str, role: str) -> List[dict]:
+        jobs = []
+        soup = BeautifulSoup(html, 'html.parser')
+        for card in soup.find_all('li'):
+            try:
+                job_link_tag = card.find('a', class_='base-card__full-link')
+                if not job_link_tag:
+                    continue
+
+                job_url = job_link_tag.get('href', '')
+                # Slug like "senior-engineer-at-atlassian-4469431197" (numeric ID at the end)
+                job_id = job_url.split('?')[0].rstrip('/').split('/')[-1]
+
+                title_tag = card.find('h3', class_='base-search-card__title')
+                company_tag = card.find('h4', class_='base-search-card__subtitle')
+                location_tag = card.find('span', class_='job-search-card__location')
+                time_tag = card.find('time')
+
+                jobs.append({
+                    'linkedin_job_id': job_id,
+                    'linkedin_link': f"https://www.linkedin.com/jobs/view/{job_id}",
+                    'company_career_url': 'TBD',  # Filled in by _keep_company_portal_jobs
+                    'company_job_id': 'TBD',
+                    'job_title': title_tag.text.strip() if title_tag else 'N/A',
+                    'company': company_tag.text.strip() if company_tag else 'N/A',
+                    'location': location_tag.text.strip() if location_tag else 'N/A',
+                    'posted_date': time_tag.get('datetime', 'N/A') if time_tag else 'N/A',
+                    'search_role': role
+                })
+            except Exception as e:
+                print(f"Error parsing job card: {str(e)}")
+        return jobs
 
     def search_jobs(self, job_role: Optional[str] = None, company: Optional[str] = None) -> pd.DataFrame:
-        """Search for jobs on LinkedIn filtered by past week and location India."""
+        """
+        Search past-week jobs in India posted by the interested companies
+        (every list in interested_companies/), or by one company with --company.
+        """
         all_jobs = []
         job_roles = [job_role] if job_role else self._read_job_roles()
 
-        # Calculate seconds since epoch for past week
-        past_week_seconds = int((datetime.now() - timedelta(days=7)).timestamp())
+        if company:
+            cid = company_directory.id_for(company)
+            if not cid:
+                print(f"❌ Couldn't find a LinkedIn company page for {company!r}")
+                return pd.DataFrame()
+            company_ids = [cid]
+        else:
+            company_ids = list(dict.fromkeys(company_directory.company_ids().values()))
+        batches = [company_ids[i:i + self.COMPANIES_PER_SEARCH]
+                   for i in range(0, len(company_ids), self.COMPANIES_PER_SEARCH)]
 
         for role in job_roles:
-            print(f"\nSearching: {role} in India" + (f" at {company}" if company else ""))
-
-            try:
-                # When company is specified, include it in keywords instead of using f_C filter
-                # LinkedIn's f_C requires company ID which we don't have
-                search_keywords = f"{role} {company}" if company else role
-
-                params = {
-                    'keywords': search_keywords,
-                    'location': 'India',
-                    'f_TPR': f'r{past_week_seconds}',  # Past week filter
-                    'f_AL': 'true',  # Filter: Show only jobs with external apply (not Easy Apply)
-                    'start': 0
-                }
-
-                response = self.session.get(self.base_url, params=params)
-                response.raise_for_status()
-
-                soup = BeautifulSoup(response.text, 'html.parser')
-                job_cards = soup.find_all('li')
-
-                for card in job_cards:
+            print(f"\nSearching: {role} in India at " +
+                  (company if company else f"{len(company_ids)} interested companies"))
+            role_jobs = 0
+            for batch in batches:
+                for page in range(self.MAX_PAGES):
+                    params = {
+                        'keywords': role,
+                        'location': 'India',
+                        'f_TPR': 'r604800',  # Posted in the past week (seconds)
+                        'f_C': ','.join(batch),  # Only these companies
+                        'start': page * 10
+                    }
                     try:
-                        # Extract job ID from data attribute or link
-                        job_link_tag = card.find('a', class_='base-card__full-link')
-                        if not job_link_tag:
-                            continue
-
-                        job_url = job_link_tag.get('href', '')
-                        # Extract numeric job ID from URL (e.g., from /jobs/view/4331060877)
-                        import re
-                        job_id_match = re.search(r'/(\d+)', job_url)
-                        job_id = job_id_match.group(1) if job_id_match else job_url.split('/')[-1].split('?')[0]
-
-                        # Extract job details
-                        title_tag = card.find('h3', class_='base-search-card__title')
-                        job_title = title_tag.text.strip() if title_tag else 'N/A'
-
-                        company_tag = card.find('h4', class_='base-search-card__subtitle')
-                        company_name = company_tag.text.strip() if company_tag else 'N/A'
-
-                        location_tag = card.find('span', class_='job-search-card__location')
-                        location = location_tag.text.strip() if location_tag else 'N/A'
-
-                        # Extract posted date
-                        time_tag = card.find('time')
-                        posted_date = time_tag.get('datetime', 'N/A') if time_tag else 'N/A'
-
-                        # Store company_career_url and company_job_id as placeholders - will be fetched on-demand
-                        all_jobs.append({
-                            'linkedin_job_id': job_id,
-                            'linkedin_link': f"https://www.linkedin.com/jobs/view/{job_id}",
-                            'company_career_url': 'TBD',  # To be determined when tailoring resume
-                            'company_job_id': 'TBD',  # To be determined when tailoring resume
-                            'job_title': job_title,
-                            'company': company_name,
-                            'location': location,
-                            'posted_date': posted_date,
-                            'search_role': role
-                        })
-
+                        response = self.session.get(self.base_url, params=params)
+                        if response.status_code == 429:
+                            print("   Rate limited by LinkedIn, waiting 30s...")
+                            time.sleep(30)
+                            response = self.session.get(self.base_url, params=params)
+                        response.raise_for_status()
                     except Exception as e:
-                        print(f"Error parsing job card: {str(e)}")
-                        continue
+                        print(f"   Error searching {role}: {str(e)}")
+                        break
 
-                print(f"Found {len(job_cards)} jobs")
-                time.sleep(2)  # Be respectful with requests
-
-            except Exception as e:
-                print(f"Error searching for {role}: {str(e)}")
-                continue
+                    jobs = self._parse_job_cards(response.text, role)
+                    all_jobs.extend(jobs)
+                    role_jobs += len(jobs)
+                    time.sleep(2)  # Be respectful with requests
+                    if len(jobs) < 10:  # last page
+                        break
+            print(f"Found {role_jobs} jobs")
 
         if not all_jobs:
             print("No jobs found")
             return pd.DataFrame()
 
-        df = pd.DataFrame(all_jobs)
+        df = self._keep_company_portal_jobs(pd.DataFrame(all_jobs), set(company_ids))
+        if df.empty:
+            print("No jobs with a company careers portal and job ID")
+            return df
         df.insert(0, 'serial_number', range(1, len(df) + 1))
         self._save_jobs(df)
         return df
+
+    def _keep_company_portal_jobs(self, df: pd.DataFrame, company_ids: set) -> pd.DataFrame:
+        """
+        Resolve each job's company careers URL + job ID and drop jobs that can't be
+        used (Easy Apply, job boards, no company job ID, or posted by a company that
+        isn't one we searched for). Jobs that couldn't be checked (Chrome not
+        available) are kept as UNRESOLVED and checked again later.
+        """
+        df = df.drop_duplicates('linkedin_job_id').reset_index(drop=True)
+        session = LinkedInSession()
+        if not session.available:
+            print("\n⚠️  Chrome with LinkedIn isn't open - company links not checked yet.")
+            print("   Run `python apply_link_resolver.py` later to fill them in.")
+            df['apply_status'] = 'UNRESOLVED'
+            return df
+
+        print(f"\n🔗 Checking company careers links for {len(df)} jobs...")
+        for i, row in df.iterrows():
+            r = resolve(row['linkedin_job_id'], session)
+            for col in ('apply_status', 'company_career_url', 'company_job_id', 'linkedin_company_id'):
+                df.at[i, col] = r[col]
+            if r['linkedin_company_id'] and r['linkedin_company_id'] not in company_ids:
+                df.at[i, 'apply_status'] = 'NOT_INTERESTED'
+            time.sleep(0.4)
+
+        counts = df['apply_status'].value_counts()
+        skipped = counts.drop(['OK', 'UNRESOLVED'], errors='ignore')
+        if not skipped.empty:
+            print("   Skipped: " + ", ".join(f"{n} {status}" for status, n in skipped.items()))
+        return df[df['apply_status'].isin(['OK', 'UNRESOLVED'])].reset_index(drop=True)
 
     def _save_jobs(self, df: pd.DataFrame):
         """Save jobs to CSV, avoiding duplicates."""

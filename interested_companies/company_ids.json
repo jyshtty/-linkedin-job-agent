@@ -1,0 +1,626 @@
+{
+  "AMD": {
+    "display": "AMD",
+    "id": "1497"
+  },
+  "ARM": {
+    "display": "Arm",
+    "id": "4472"
+  },
+  "Adobe": {
+    "display": "Adobe",
+    "id": "1480"
+  },
+  "Airbnb": {
+    "display": "Airbnb",
+    "id": "309694"
+  },
+  "Akuna Capital": {
+    "display": "Akuna Capital",
+    "id": "2322562"
+  },
+  "AlphaGrep": {
+    "display": "AlphaGrep",
+    "id": "2282504"
+  },
+  "Amazon": {
+    "display": "Amazon",
+    "id": "1586"
+  },
+  "American Express": {
+    "display": "American Express",
+    "id": "1277"
+  },
+  "Apple": {
+    "display": "Apple",
+    "id": "162479"
+  },
+  "Atlassian": {
+    "display": "Atlassian",
+    "id": "22688"
+  },
+  "BharatPe": {
+    "display": "BharatPe",
+    "id": "14510217"
+  },
+  "BlackRock": {
+    "display": "BlackRock",
+    "id": "4764"
+  },
+  "Blinkit": {
+    "display": "Blinkit",
+    "id": "80918929"
+  },
+  "Bloomberg": {
+    "display": "Bloomberg",
+    "id": "2494"
+  },
+  "Bosch": {
+    "display": "Bosch",
+    "id": "2508619"
+  },
+  "Brex": {
+    "display": "Brex",
+    "id": "18505670"
+  },
+  "Broadcom": {
+    "display": "Broadcom",
+    "id": "3072"
+  },
+  "BrowserStack": {
+    "display": "BrowserStack",
+    "id": "2553488"
+  },
+  "Buffer": {
+    "display": "Buffer",
+    "id": "1588266"
+  },
+  "CRED": {
+    "display": "CRED",
+    "id": "14485479"
+  },
+  "Canva": {
+    "display": "Canva",
+    "id": "2850862"
+  },
+  "Capital One": {
+    "display": "Capital One",
+    "id": "1419"
+  },
+  "Chargebee": {
+    "display": "Chargebee",
+    "id": "2277385"
+  },
+  "Checkout.com": {
+    "display": "Checkout.com",
+    "id": "3110635"
+  },
+  "Cisco": {
+    "display": "Cisco",
+    "id": "1063"
+  },
+  "Citadel": {
+    "display": "Citadel",
+    "id": "163056"
+  },
+  "CleverTap": {
+    "display": "CleverTap",
+    "id": "6611801"
+  },
+  "Cloudflare": {
+    "display": "Cloudflare",
+    "id": "407222"
+  },
+  "Coinbase": {
+    "display": "Coinbase",
+    "id": "2857634"
+  },
+  "Confluent": {
+    "display": "Confluent",
+    "id": "113075991"
+  },
+  "CrowdStrike": {
+    "display": "CrowdStrike",
+    "id": "2497653"
+  },
+  "Cure.fit": {
+    "display": "CultFit",
+    "id": "13231432"
+  },
+  "DRW": {
+    "display": "DRW",
+    "id": "15999"
+  },
+  "Da Vinci Derivatives": {
+    "display": null,
+    "id": null
+  },
+  "Databricks": {
+    "display": "Databricks",
+    "id": "3477522"
+  },
+  "Datadog": {
+    "display": "Datadog",
+    "id": "1066442"
+  },
+  "Deel": {
+    "display": "Deel",
+    "id": "18922914"
+  },
+  "Delhivery": {
+    "display": "Delhivery",
+    "id": "2312777"
+  },
+  "Dell Technologies": {
+    "display": "Dell Technologies",
+    "id": "15088102"
+  },
+  "Dhan": {
+    "display": "Dhan",
+    "id": "74046708"
+  },
+  "DigitalOcean": {
+    "display": "DigitalOcean",
+    "id": "2601253"
+  },
+  "DocuSign": {
+    "display": "Docusign",
+    "id": "19022"
+  },
+  "DoorDash": {
+    "display": "DoorDash",
+    "id": "3205573"
+  },
+  "Dream11": {
+    "display": "Dream11",
+    "id": "264559"
+  },
+  "Dropbox": {
+    "display": "Dropbox",
+    "id": "167251"
+  },
+  "Dunzo": {
+    "display": "Dunzo",
+    "id": "7797838"
+  },
+  "Dynatrace": {
+    "display": "Dynatrace",
+    "id": "125999"
+  },
+  "Elastic": {
+    "display": "Elastic",
+    "id": "814025"
+  },
+  "Estee Advisors": {
+    "display": "Estee Advisors",
+    "id": "286333"
+  },
+  "Figma": {
+    "display": "Figma",
+    "id": "3650502"
+  },
+  "Flipkart": {
+    "display": "Flipkart",
+    "id": "321062"
+  },
+  "Fortinet": {
+    "display": "Fortinet",
+    "id": "6460"
+  },
+  "Freshworks": {
+    "display": "Freshworks",
+    "id": "1377014"
+  },
+  "GitHub": {
+    "display": "GitHub",
+    "id": "1418841"
+  },
+  "GitLab": {
+    "display": "GitLab",
+    "id": "5101804"
+  },
+  "GoTo": {
+    "display": "GoTo Group",
+    "id": "73804997"
+  },
+  "Gojek": {
+    "display": "GOJEK LTD",
+    "id": "16969018"
+  },
+  "Goldman Sachs": {
+    "display": "Goldman Sachs",
+    "id": "1382"
+  },
+  "Google": {
+    "display": "Google",
+    "id": "1441"
+  },
+  "Graviton Research Capital": {
+    "display": "Graviton Research Capital",
+    "id": "9329182"
+  },
+  "Groww": {
+    "display": "Groww",
+    "id": "10813156"
+  },
+  "HSBC": {
+    "display": "HSBC",
+    "id": "1241"
+  },
+  "HashiCorp": {
+    "display": "HashiCorp",
+    "id": "2830763"
+  },
+  "Honeywell": {
+    "display": "Honeywell Technologies",
+    "id": "1344"
+  },
+  "Hudson River Trading": {
+    "display": "Hudson River Trading",
+    "id": "730004"
+  },
+  "IMC Trading": {
+    "display": "IMC Trading",
+    "id": "200030"
+  },
+  "InMobi": {
+    "display": "InMobi",
+    "id": "104812249"
+  },
+  "Intel": {
+    "display": "Intel",
+    "id": "1053"
+  },
+  "Intuit": {
+    "display": "Intuit",
+    "id": "1666"
+  },
+  "JPMorgan Chase": {
+    "display": "JPMorgan Chase",
+    "id": "143949932"
+  },
+  "Jane Street": {
+    "display": "Jane Street",
+    "id": "1713404"
+  },
+  "Jump Trading": {
+    "display": "Jump Trading",
+    "id": "294033"
+  },
+  "Juspay": {
+    "display": "JUSPAY",
+    "id": "3590874"
+  },
+  "Lenskart": {
+    "display": "Lenskart",
+    "id": "80491625"
+  },
+  "LinkedIn": {
+    "display": "LinkedIn",
+    "id": "1337"
+  },
+  "MakeMyTrip": {
+    "display": "MakeMyTrip",
+    "id": "35113"
+  },
+  "Meesho": {
+    "display": "Meesho",
+    "id": "10037698"
+  },
+  "Meta": {
+    "display": "Meta",
+    "id": "10667"
+  },
+  "Microsoft": {
+    "display": "Microsoft",
+    "id": "1035"
+  },
+  "Millennium": {
+    "display": "Millennium",
+    "id": "164987"
+  },
+  "Moj": {
+    "display": null,
+    "id": null
+  },
+  "MongoDB": {
+    "display": "MongoDB",
+    "id": "783611"
+  },
+  "Morgan Stanley": {
+    "display": "Morgan Stanley",
+    "id": "497017"
+  },
+  "Myntra": {
+    "display": "Myntra",
+    "id": "361348"
+  },
+  "NK Securities": {
+    "display": "NK Securities Research",
+    "id": "28820226"
+  },
+  "NVIDIA": {
+    "display": "NVIDIA",
+    "id": "3608"
+  },
+  "Navi": {
+    "display": "Navi",
+    "id": "40662386"
+  },
+  "NetApp": {
+    "display": "NetApp",
+    "id": "2105"
+  },
+  "Netflix": {
+    "display": "Netflix",
+    "id": "165158"
+  },
+  "Netskope": {
+    "display": "Netskope",
+    "id": "3338050"
+  },
+  "New Relic": {
+    "display": "New Relic",
+    "id": "426253"
+  },
+  "Nike": {
+    "display": "Nike",
+    "id": "2029"
+  },
+  "Nutanix": {
+    "display": "Nutanix",
+    "id": "735085"
+  },
+  "OYO": {
+    "display": "OYO",
+    "id": "3716484"
+  },
+  "Okta": {
+    "display": "Okta",
+    "id": "926041"
+  },
+  "Ola": {
+    "display": "Ola",
+    "id": "2580522"
+  },
+  "Optiver": {
+    "display": "Optiver",
+    "id": "13216"
+  },
+  "Oracle": {
+    "display": "Oracle",
+    "id": "1028"
+  },
+  "Palantir": {
+    "display": "Palantir Technologies",
+    "id": "20708"
+  },
+  "Palo Alto Networks": {
+    "display": "Palo Alto Networks",
+    "id": "30086"
+  },
+  "PayPal": {
+    "display": "PayPal",
+    "id": "1482"
+  },
+  "Paytm": {
+    "display": "Paytm",
+    "id": "2340144"
+  },
+  "PhonePe": {
+    "display": "PhonePe",
+    "id": "10479149"
+  },
+  "Pinterest": {
+    "display": "Pinterest",
+    "id": "1124131"
+  },
+  "Plaid": {
+    "display": "Plaid",
+    "id": "2684737"
+  },
+  "Policybazaar": {
+    "display": "Policybazaar.com",
+    "id": "303524"
+  },
+  "Postman": {
+    "display": "Postman",
+    "id": "3795851"
+  },
+  "Practo": {
+    "display": "Practo",
+    "id": "2390063"
+  },
+  "Pure Storage": {
+    "display": "Pure Storage",
+    "id": "1632202"
+  },
+  "Quadeye": {
+    "display": "Quadeye",
+    "id": "10167707"
+  },
+  "Qualcomm": {
+    "display": "Qualcomm",
+    "id": "2017"
+  },
+  "Quantbox": {
+    "display": "Quantbox",
+    "id": "10256551"
+  },
+  "Qube Research & Technologies": {
+    "display": "Qube Research & Technologies",
+    "id": "80402048"
+  },
+  "QuillBot": {
+    "display": "Quillbot",
+    "id": "14811938"
+  },
+  "Razorpay": {
+    "display": "Razorpay",
+    "id": "3788927"
+  },
+  "Red Hat": {
+    "display": "Red Hat",
+    "id": "3545"
+  },
+  "Renaissance Technologies": {
+    "display": "Renaissance Technologies LLC",
+    "id": "113361909"
+  },
+  "Rubrik": {
+    "display": "Rubrik",
+    "id": "4840301"
+  },
+  "SAP": {
+    "display": "SAP",
+    "id": "1115"
+  },
+  "SIG": {
+    "display": "Susquehanna International Group",
+    "id": "165964"
+  },
+  "Salesforce": {
+    "display": "Salesforce",
+    "id": "3185"
+  },
+  "Samsung Research": {
+    "display": "Samsung Research America (SRA)",
+    "id": "78467539"
+  },
+  "SentinelOne": {
+    "display": "SentinelOne",
+    "id": "2886771"
+  },
+  "ServiceNow": {
+    "display": "ServiceNow",
+    "id": "29352"
+  },
+  "ShareChat": {
+    "display": "ShareChat",
+    "id": "6605974"
+  },
+  "Shopify": {
+    "display": "Shopify",
+    "id": "784652"
+  },
+  "Siemens": {
+    "display": "Siemens",
+    "id": "1043"
+  },
+  "Snap": {
+    "display": "Snap Inc.",
+    "id": "15191764"
+  },
+  "Snowflake": {
+    "display": "Snowflake",
+    "id": "3653845"
+  },
+  "Spotify": {
+    "display": "Spotify",
+    "id": "207470"
+  },
+  "Stripe": {
+    "display": "Stripe",
+    "id": "2135371"
+  },
+  "Swiggy": {
+    "display": "Swiggy",
+    "id": "9252341"
+  },
+  "Target": {
+    "display": "Target",
+    "id": "1512"
+  },
+  "Tekion": {
+    "display": "Tekion Corp",
+    "id": "41315"
+  },
+  "Tower Research Capital": {
+    "display": "Tower Research Capital",
+    "id": "36865"
+  },
+  "Trexquant": {
+    "display": "Trexquant Investment LP",
+    "id": "9375994"
+  },
+  "Turnitin": {
+    "display": "Turnitin",
+    "id": "233308"
+  },
+  "Twilio": {
+    "display": "Twilio",
+    "id": "400528"
+  },
+  "Two Sigma": {
+    "display": "Two Sigma",
+    "id": "27915"
+  },
+  "Uber": {
+    "display": "Uber",
+    "id": "1815218"
+  },
+  "Udaan": {
+    "display": "Udaan",
+    "id": "14430386"
+  },
+  "UiPath": {
+    "display": "UiPath",
+    "id": "1523656"
+  },
+  "Urban Company": {
+    "display": "Urban Company",
+    "id": "31274049"
+  },
+  "VMware": {
+    "display": "VMware",
+    "id": "2988"
+  },
+  "Virtu Financial": {
+    "display": "Virtu Financial",
+    "id": "1224663"
+  },
+  "Visa": {
+    "display": "Visa",
+    "id": "2190"
+  },
+  "Walmart Global Tech": {
+    "display": "Walmart Global Tech",
+    "id": "11174522"
+  },
+  "Workday": {
+    "display": "Workday",
+    "id": "17719"
+  },
+  "WorldQuant": {
+    "display": "WorldQuant",
+    "id": "276383"
+  },
+  "XTX Markets": {
+    "display": "XTX Markets",
+    "id": "10055264"
+  },
+  "Zepto": {
+    "display": "Zepto",
+    "id": "76108196"
+  },
+  "Zoho": {
+    "display": "Zoho",
+    "id": "38373"
+  },
+  "Zomato": {
+    "display": "Zomato",
+    "id": "422813"
+  },
+  "Zscaler": {
+    "display": "Zscaler",
+    "id": "234625"
+  },
+  "eBay": {
+    "display": "eBay",
+    "id": "1481"
+  },
+  "iRage": {
+    "display": "iRage",
+    "id": "470470"
+  }
+}

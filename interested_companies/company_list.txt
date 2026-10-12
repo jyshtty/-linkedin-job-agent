@@ -71,3 +71,87 @@ CRED
 DocuSign
 Deel
 Swiggy
+Jane Street
+Hudson River Trading
+Citadel
+Jump Trading
+Palantir
+Renaissance Technologies
+Google
+Meta
+Bloomberg
+Databricks
+Two Sigma
+Optiver
+Microsoft
+Apple
+Uber
+Airbnb
+LinkedIn
+Stripe
+Amazon
+Salesforce
+Atlassian
+Netflix
+NVIDIA
+DoorDash
+Adobe
+Coinbase
+Snap
+Spotify
+Pinterest
+Shopify
+PayPal
+Oracle
+Dropbox
+eBay
+Visa
+Capital One
+GitLab
+GitHub
+Cloudflare
+MongoDB
+Datadog
+HashiCorp
+DigitalOcean
+Red Hat
+Cisco
+Palo Alto Networks
+Zscaler
+Fortinet
+SentinelOne
+Rubrik
+Netskope
+Dynatrace
+New Relic
+NetApp
+Pure Storage
+Dell Technologies
+Broadcom
+ARM
+Samsung Research
+Bosch
+Siemens
+Honeywell
+Zoho
+Freshworks
+InMobi
+Ola
+Dream11
+ShareChat
+Moj
+MakeMyTrip
+Policybazaar
+Urban Company
+Lenskart
+Delhivery
+Udaan
+Dhan
+BharatPe
+Navi
+Gojek
+GoTo
+Myntra
+OYO
+Practo
+Cure.fit
