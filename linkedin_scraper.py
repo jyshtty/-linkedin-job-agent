@@ -35,7 +35,19 @@ class LinkedInJobScraper:
         This is a public method to be called on-demand (e.g., by tailor_resume).
         """
         link = resolve(job_id, LinkedInSession())
+        job_description = self.fetch_job_description(job_id)
+        if job_description == 'N/A' and link['description']:
+            job_description = link['description']
 
+        return {
+            'apply_status': link['apply_status'],
+            'company_apply_link': link['company_career_url'],
+            'company_job_id': link['company_job_id'],
+            'job_description': job_description
+        }
+
+    def fetch_job_description(self, job_id: str) -> str:
+        """Job description from LinkedIn's public job page (no login or Chrome needed)."""
         job_description = 'N/A'
         try:
             job_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{numeric_job_id(job_id)}"
@@ -50,16 +62,7 @@ class LinkedInJobScraper:
                 job_description = desc_tag.get_text(strip=True)
         except Exception as e:
             print(f"Warning: Could not fetch job description for {job_id}: {str(e)}")
-
-        if job_description == 'N/A' and link['description']:
-            job_description = link['description']
-
-        return {
-            'apply_status': link['apply_status'],
-            'company_apply_link': link['company_career_url'],
-            'company_job_id': link['company_job_id'],
-            'job_description': job_description
-        }
+        return job_description
 
     def _parse_job_cards(self, html: str, role: str) -> List[dict]:
         jobs = []
@@ -94,20 +97,27 @@ class LinkedInJobScraper:
                 print(f"Error parsing job card: {str(e)}")
         return jobs
 
-    def search_jobs(self, job_role: Optional[str] = None, company: Optional[str] = None) -> pd.DataFrame:
+    def search_jobs(self, job_role: Optional[str] = None, company: Optional[str] = None,
+                    companies: Optional[List[str]] = None) -> pd.DataFrame:
         """
         Search past-week jobs in India posted by the interested companies
-        (every list in interested_companies/), or by one company with --company.
+        (every list in interested_companies/), or only by `company` / `companies`.
         """
         all_jobs = []
         job_roles = [job_role] if job_role else self._read_job_roles()
 
-        if company:
-            cid = company_directory.id_for(company)
-            if not cid:
-                print(f"❌ Couldn't find a LinkedIn company page for {company!r}")
+        names = companies or ([company] if company else None)
+        if names:
+            company_ids = []
+            for name in names:
+                cid = company_directory.id_for(name)
+                if cid:
+                    company_ids.append(cid)
+                else:
+                    print(f"⚠️  Couldn't find a LinkedIn company page for {name!r}, skipping it")
+            if not company_ids:
                 return pd.DataFrame()
-            company_ids = [cid]
+            company = ', '.join(names) if len(names) <= 3 else f"{len(names)} selected companies"
         else:
             company_ids = list(dict.fromkeys(company_directory.company_ids().values()))
         batches = [company_ids[i:i + self.COMPANIES_PER_SEARCH]

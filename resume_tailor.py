@@ -326,8 +326,14 @@ Return the FULL modified LaTeX document from \\documentclass to \\end{{document}
 
         return None
 
-    def tailor_resume(self, serial_number: int) -> Optional[str]:
-        """Main function to tailor resume for a specific job."""
+    def tailor_resume(self, serial_number: int, allow_overleaf: bool = True) -> Optional[str]:
+        """
+        Main function to tailor resume for a specific job.
+        Returns the PDF path (or .tex path if it couldn't be compiled) and records the
+        outcome in self.last_status: 'tailored', 'not_needed', 'skipped', 'tex_only' or 'error'.
+        allow_overleaf=False skips the slow browser-based Overleaf fallback (used by batch runs).
+        """
+        self.last_status = 'error'
         print(f"\n{'='*80}")
         print(f"TAILORING RESUME FOR JOB #{serial_number}")
         print(f"{'='*80}\n")
@@ -341,9 +347,18 @@ Return the FULL modified LaTeX document from \\documentclass to \\end{{document}
         print(f"Company: {job['company']}")
         print(f"Location: {job['location']}")
 
-        # Fetch full job details (description, company link) on-demand
+        # Company link + job ID come from the CSV when already resolved (no Chrome needed);
+        # otherwise resolve them now. The description is always fetched fresh.
         print("📥 Fetching full job details from LinkedIn...")
-        job_details = self.scraper.fetch_job_details(job['linkedin_job_id'])
+        if job.get('apply_status') == 'OK':
+            job_details = {
+                'apply_status': 'OK',
+                'company_apply_link': job['company_career_url'],
+                'company_job_id': str(job['company_job_id']),
+                'job_description': self.scraper.fetch_job_description(job['linkedin_job_id']),
+            }
+        else:
+            job_details = self.scraper.fetch_job_details(job['linkedin_job_id'])
         job_description = job_details['job_description']
         company_apply_link = job_details['company_apply_link']
         company_job_id = job_details['company_job_id']
@@ -354,6 +369,7 @@ Return the FULL modified LaTeX document from \\documentclass to \\end{{document}
 
         if job_details['apply_status'] != 'OK':
             print(f"⏭️  Skipping: {SKIP_REASONS.get(job_details['apply_status'], job_details['apply_status'])}.")
+            self.last_status = 'skipped'
             return None
 
         print(f"🔗 Company Career Page: {company_apply_link}")
@@ -375,6 +391,7 @@ Return the FULL modified LaTeX document from \\documentclass to \\end{{document}
 
         if match_percentage >= 80:
             print(f"✓ Resume already matches {match_percentage}% - No tailoring needed!")
+            self.last_status = 'not_needed'
             return None
 
         print(f"⚡ Match below 80% - Tailoring resume...\n")
@@ -416,8 +433,13 @@ Return the FULL modified LaTeX document from \\documentclass to \\end{{document}
             print(f"\n{'='*80}")
             print(f"✅ SUCCESS! Tailored resume saved to: {pdf_path}")
             print(f"{'='*80}\n")
+            self.last_status = 'tailored'
             return pdf_path
         else:
+            if not allow_overleaf:
+                print(f"⚠️  Could not compile PDF. LaTeX file kept at: {tex_path}")
+                self.last_status = 'tex_only'
+                return tex_path
             print(f"\n{'='*80}")
             print(f"⚠️  LaTeX file created: {tex_path}")
             print(f"\n💡 Attempting automated Overleaf compilation...")
@@ -436,6 +458,7 @@ Return the FULL modified LaTeX document from \\documentclass to \\end{{document}
                 expected_pdf = tex_path.replace('.tex', '.pdf')
                 if os.path.exists(expected_pdf):
                     print(f"\n✅ SUCCESS via Overleaf automation!")
+                    self.last_status = 'tailored'
                     return expected_pdf
 
             except Exception as e:
@@ -452,4 +475,5 @@ Return the FULL modified LaTeX document from \\documentclass to \\end{{document}
             print(f"   brew install --cask basictex")
             print(f"   Then: cd {self.tailored_resume_dir} && pdflatex {os.path.basename(tex_path)}")
             print(f"{'='*80}\n")
+            self.last_status = 'tex_only'
             return tex_path
