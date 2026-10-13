@@ -80,3 +80,7 @@ batch_state.json
 batch_state.json.tmp
 .stop_*
 .auto_tailor_on
+
+# Referral message logs (local history of who was contacted)
+referral_log.csv
+referral_log_archive.csv
