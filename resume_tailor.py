@@ -8,6 +8,8 @@ import json
 import re
 from linkedin_scraper import LinkedInJobScraper
 from apply_link_resolver import SKIP_REASONS
+import portal_search
+from portal_search import is_portal_job
 
 
 class ResumeTailor:
@@ -349,8 +351,16 @@ Return the FULL modified LaTeX document from \\documentclass to \\end{{document}
 
         # Company link + job ID come from the CSV when already resolved (no Chrome needed);
         # otherwise resolve them now. The description is always fetched fresh.
-        print("📥 Fetching full job details from LinkedIn...")
-        if job.get('apply_status') == 'OK':
+        if is_portal_job(job):  # found on the company portal: no LinkedIn posting to read
+            print("📥 Fetching job description from the company portal...")
+            job_details = {
+                'apply_status': 'OK',
+                'company_apply_link': job['company_career_url'],
+                'company_job_id': str(job['company_job_id']),
+                'job_description': portal_search.fetch_description(job['company_career_url']),
+            }
+        elif job.get('apply_status') == 'OK':
+            print("📥 Fetching full job details from LinkedIn...")
             job_details = {
                 'apply_status': 'OK',
                 'company_apply_link': job['company_career_url'],
@@ -358,6 +368,7 @@ Return the FULL modified LaTeX document from \\documentclass to \\end{{document}
                 'job_description': self.scraper.fetch_job_description(job['linkedin_job_id']),
             }
         else:
+            print("📥 Fetching full job details from LinkedIn...")
             job_details = self.scraper.fetch_job_details(job['linkedin_job_id'])
         job_description = job_details['job_description']
         company_apply_link = job_details['company_apply_link']

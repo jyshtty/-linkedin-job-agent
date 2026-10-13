@@ -3,7 +3,7 @@ Local API for the job-agent UI.
 
     .venv/bin/python -m uvicorn api.server:app --port 8000     (from the repo root)
 
-Every action (search, tailor, referral, batches, flow) runs `batch.py` as a
+Every action (search, portal search, tailor, referral, batches, flow) runs `batch.py` as a
 background process; the UI polls its log. Actions that drive Chrome share one
 lane and tailoring has its own, so a tailor batch can run alongside a referral
 batch but two Chrome jobs never overlap.
@@ -38,12 +38,14 @@ from referral_complete import LOG_FILE, find_resume  # noqa: E402
 UI_DIST = os.path.join(ROOT, 'ui', 'dist')
 
 # Which lanes each task occupies, and which batch stop-flag stops it gracefully
+# ('jobs' = writes searched_jobs.csv, so two searches never write it at once)
 LANES = {
-    'search': {'chrome'}, 'referral': {'chrome'}, 'batch_referral': {'chrome'},
-    'tailor': {'tailor'}, 'batch_tailor': {'tailor'}, 'auto_tailor': {'tailor'}, 'flow': {'chrome', 'tailor'},
+    'search': {'chrome', 'jobs'}, 'referral': {'chrome'}, 'batch_referral': {'chrome'},
+    'tailor': {'tailor'}, 'batch_tailor': {'tailor'}, 'auto_tailor': {'tailor'}, 'flow': {'chrome', 'tailor', 'jobs'},
+    'portal_search': {'jobs'},
 }
 GRACEFUL_STOP = {'tailor': ['tailor'], 'batch_tailor': ['tailor'], 'auto_tailor': ['tailor'], 'referral': ['referral'],
-                 'batch_referral': ['referral'], 'flow': ['tailor', 'referral']}
+                 'batch_referral': ['referral'], 'flow': ['tailor', 'referral'], 'portal_search': ['portal']}
 
 app = FastAPI(title='LinkedIn Job Agent')
 
@@ -306,6 +308,25 @@ def _search_args(body: SearchBody):
 def search(body: SearchBody):
     label = f"Search {', '.join(body.roles) or 'all roles'}"
     return start_task('search', label, ['search', *_search_args(body)])
+
+
+class PortalSearchBody(BaseModel):
+    companies: List[str]
+    roles: List[str] = []
+    max_credits: int = 150  # per company
+
+
+@app.post('/api/portal-search')
+def portal_search(body: PortalSearchBody):
+    if not body.companies:
+        raise HTTPException(400, 'Pick at least one company — each one is a paid Firecrawl agent run.')
+    args = ['portal-search', '--max-credits', str(body.max_credits)]
+    for c in body.companies:
+        args += ['--company', c]
+    for r in body.roles:
+        args += ['--role', r]
+    shown = ', '.join(body.companies) if len(body.companies) <= 3 else f'{len(body.companies)} companies'
+    return start_task('portal_search', f'Portal search {shown}', args)
 
 
 @app.post('/api/flow')

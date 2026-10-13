@@ -14,4 +14,4 @@ dependencies = [
 ]
 
 [tool.setuptools]
-py-modules = ["main", "linkedin_scraper", "resume_tailor", "apply_link_resolver", "company_directory", "referral_complete", "batch"]
+py-modules = ["main", "linkedin_scraper", "resume_tailor", "apply_link_resolver", "company_directory", "referral_complete", "batch", "portal_search"]

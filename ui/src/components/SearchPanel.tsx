@@ -4,17 +4,20 @@ import type { Meta } from '../api'
 interface Props {
   meta: Meta | null
   busy: boolean
+  portalBusy: boolean
   onSearch: (roles: string[], companies: string[]) => void
   onStartFlow: (roles: string[], companies: string[]) => void
+  onPortalSearch: (roles: string[], companies: string[], maxCredits: number) => void
 }
 
-export function SearchPanel({ meta, busy, onSearch, onStartFlow }: Props) {
+export function SearchPanel({ meta, busy, portalBusy, onSearch, onStartFlow, onPortalSearch }: Props) {
   const [allCompanies, setAllCompanies] = useState(true)
   const [companies, setCompanies] = useState<string[]>([])
   const [companyFilter, setCompanyFilter] = useState('')
   const [roles, setRoles] = useState<string[]>([])
   const [extraRoles, setExtraRoles] = useState<string[]>([])
   const [newRole, setNewRole] = useState('')
+  const [maxCredits, setMaxCredits] = useState(150)
 
   const shownCompanies = useMemo(
     () => (meta?.companies ?? []).filter((c) => c.toLowerCase().includes(companyFilter.toLowerCase())),
@@ -23,6 +26,8 @@ export function SearchPanel({ meta, busy, onSearch, onStartFlow }: Props) {
   const roleOptions = [...(meta?.roles ?? []), ...extraRoles]
   const chosenCompanies = allCompanies ? [] : companies
   const canRun = !busy && (allCompanies || companies.length > 0)
+  // Each company is a paid Firecrawl agent run, so the portal search needs an explicit pick
+  const canPortalSearch = !portalBusy && !allCompanies && companies.length > 0 && maxCredits > 0
 
   const toggle = (list: string[], value: string) =>
     list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
@@ -95,6 +100,32 @@ export function SearchPanel({ meta, busy, onSearch, onStartFlow }: Props) {
         </button>
       </div>
       <div className="hint">Start flow = search → tailor batch → referral batch.</div>
+
+      <label className="field-label">Company portal search</label>
+      <div className="row">
+        <button
+          className="btn"
+          disabled={!canPortalSearch}
+          onClick={() => onPortalSearch(roles, chosenCompanies, maxCredits)}
+        >
+          Search company portals
+        </button>
+        <input
+          className="input small"
+          type="number"
+          min={10}
+          step={10}
+          value={maxCredits}
+          onChange={(e) => setMaxCredits(Number(e.target.value))}
+          title="Firecrawl credit cap per company"
+        />
+        <span className="hint">credits / company</span>
+      </div>
+      <div className="hint">
+        {allCompanies || companies.length === 0
+          ? "Untick “All interested companies” and pick companies: each one is a paid Firecrawl AI agent run."
+          : `Firecrawl AI agent searches ${companies.length} careers portal${companies.length > 1 ? 's' : ''}; jobs go to the job list for auto tailor.`}
+      </div>
     </section>
   )
 }

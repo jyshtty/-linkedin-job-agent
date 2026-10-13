@@ -12,6 +12,7 @@ Single jobs and searches (used by the UI so they can be stopped the same way):
     python batch.py referral-job <serial> [--dry-run]
     python batch.py search [--role R ...] [--company C ...]
     python batch.py flow [--role R ...] [--company C ...] [--size 10] [--messages 10]
+    python batch.py portal-search --company C [--company C ...] [--role R ...] [--max-credits 150]
 
 Progress is saved after every job in batch_state.json. Each job is remembered by its
 LinkedIn job ID, so a rebuilt job list (new serial numbers) doesn't resume at the wrong job.
@@ -288,6 +289,13 @@ def run_search(roles=None, companies=None):
         scraper.search_jobs(job_role=role, companies=companies or None)
 
 
+def run_portal_search(companies, roles=None, max_credits=150):
+    import portal_search
+    clear_stop('portal')
+    portal_search.search_portals(companies, roles, max_credits, should_stop=lambda: stop_requested('portal'))
+    clear_stop('portal')
+
+
 def run_flow(roles=None, companies=None, size=10, messages=10, dry_run=False):
     print("▶️  FLOW: search → tailor batch → referral batch\n")
     run_search(roles, companies)
@@ -322,6 +330,10 @@ def main():
             sp.add_argument('--size', type=int, default=10)
             sp.add_argument('--messages', type=int, default=10)
             sp.add_argument('--dry-run', action='store_true')
+    ps = sub.add_parser('portal-search')
+    ps.add_argument('--company', action='append', required=True)
+    ps.add_argument('--role', action='append')
+    ps.add_argument('--max-credits', type=int, default=150)
     a = p.parse_args()
 
     if a.cmd == 'tailor':
@@ -342,6 +354,8 @@ def main():
         referral_job(a.serial, a.dry_run)
     elif a.cmd == 'search':
         run_search(a.role, a.company)
+    elif a.cmd == 'portal-search':
+        run_portal_search(a.company, a.role, a.max_credits)
     elif a.cmd == 'flow':
         run_flow(a.role, a.company, a.size, a.messages, a.dry_run)
 

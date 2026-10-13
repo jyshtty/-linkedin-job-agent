@@ -9,6 +9,7 @@ import { TaskPanel } from './components/TaskPanel'
 // Must match LANES in api/server.py: Chrome tasks never overlap; tailoring has its own lane.
 const CHROME_KINDS = ['search', 'referral', 'batch_referral', 'flow']
 const TAILOR_KINDS = ['tailor', 'batch_tailor', 'auto_tailor', 'flow']
+const JOBS_KINDS = ['search', 'flow', 'portal_search'] // tasks that write searched_jobs.csv
 
 export default function App() {
   const [meta, setMeta] = useState<Meta | null>(null)
@@ -67,6 +68,7 @@ export default function App() {
   const running = tasks.filter((t) => t.status === 'running')
   const chromeBusy = running.some((t) => CHROME_KINDS.includes(t.kind))
   const tailorBusy = running.some((t) => TAILOR_KINDS.includes(t.kind))
+  const jobsBusy = running.some((t) => JOBS_KINDS.includes(t.kind))
   const runningBatch = (kind: BatchKind) =>
     running.find((t) => t.kind === `batch_${kind}` || t.kind === 'flow' || (kind === 'tailor' && t.kind === 'auto_tailor'))
   const selectedJob = jobs.find((j) => j.serial === selected)
@@ -156,9 +158,11 @@ export default function App() {
       <div className="agents">
         <SearchPanel
           meta={meta}
-          busy={chromeBusy}
+          busy={chromeBusy || jobsBusy}
+          portalBusy={jobsBusy}
           onSearch={(roles, companies) => launch(() => api.search(roles, companies))}
           onStartFlow={startFlow}
+          onPortalSearch={(roles, companies, maxCredits) => launch(() => api.portalSearch(roles, companies, maxCredits))}
         />
         <TailorPanel job={selectedJob} busy={tailorBusy} onTailor={(s) => launch(() => api.tailor(s))} />
         <ReferralPanel job={selectedJob} busy={chromeBusy} onSend={(s, dry) => launch(() => api.referral(s, dry))} />

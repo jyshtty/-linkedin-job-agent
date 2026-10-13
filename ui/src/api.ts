@@ -95,6 +95,8 @@ export const api = {
   search: (roles: string[], companies: string[]) => request<Task>('/search', { roles, companies }),
   flow: (roles: string[], companies: string[], size: number, messages: number) =>
     request<Task>('/flow', { roles, companies, size, messages }),
+  portalSearch: (roles: string[], companies: string[], max_credits: number) =>
+    request<Task>('/portal-search', { roles, companies, max_credits }),
   tailor: (serial: number) => request<Task>('/tailor', { serial }),
   referral: (serial: number, dry_run: boolean) => request<Task>('/referral', { serial, dry_run }),
 
