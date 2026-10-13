@@ -7,6 +7,10 @@ Every action (search, tailor, referral, batches, flow) runs `batch.py` as a
 background process; the UI polls its log. Actions that drive Chrome share one
 lane and tailoring has its own, so a tailor batch can run alongside a referral
 batch but two Chrome jobs never overlap.
+
+Auto tailor: while its toggle is on (survives restarts), a watcher thread keeps starting
+tailor batches from the saved checkpoint whenever the tailor lane is free and the AI
+service is reachable, so tailoring resumes on its own after a restart or an outage.
 """
 import itertools
 import os
@@ -36,9 +40,9 @@ UI_DIST = os.path.join(ROOT, 'ui', 'dist')
 # Which lanes each task occupies, and which batch stop-flag stops it gracefully
 LANES = {
     'search': {'chrome'}, 'referral': {'chrome'}, 'batch_referral': {'chrome'},
-    'tailor': {'tailor'}, 'batch_tailor': {'tailor'}, 'flow': {'chrome', 'tailor'},
+    'tailor': {'tailor'}, 'batch_tailor': {'tailor'}, 'auto_tailor': {'tailor'}, 'flow': {'chrome', 'tailor'},
 }
-GRACEFUL_STOP = {'tailor': ['tailor'], 'batch_tailor': ['tailor'], 'referral': ['referral'],
+GRACEFUL_STOP = {'tailor': ['tailor'], 'batch_tailor': ['tailor'], 'auto_tailor': ['tailor'], 'referral': ['referral'],
                  'batch_referral': ['referral'], 'flow': ['tailor', 'referral']}
 
 app = FastAPI(title='LinkedIn Job Agent')
@@ -93,6 +97,103 @@ def start_task(kind, label, args):
         TASKS.append(task)
         del TASKS[:-30]
         return task.summary()
+
+# ---------------------------------------------------------------- auto tailor
+
+
+AUTO_BATCH_SIZE = 5      # jobs per auto batch; small so the tailor lane frees up often
+AUTO_POLL_SECS = 5
+AUTO_RETRY_SECS = 120    # wait after the AI service is down or a batch failed
+AUTO_MAX_FAILS = 3       # skip a job that keeps failing while the service is up
+AUTO = {'state': 'off', 'detail': '', 'task_id': None}
+
+
+def _auto_set(state, detail=''):
+    AUTO.update(state=state, detail=detail)
+
+
+def _auto_after_batch(task, fails):
+    """Back off after a failed auto batch; skip a job that fails repeatedly while the service is up."""
+    history = batch.load_state()['tailor']['history']
+    if task.status == 'done' and not (history and history[0].get('error')):
+        return 0
+    pending = batch.pending_jobs('tailor')
+    if pending and batch.ai_service_up():
+        serial = int(pending[0]['serial_number'])
+        fails[serial] = fails.get(serial, 0) + 1
+        if fails[serial] >= AUTO_MAX_FAILS:
+            batch.reset('tailor', serial)
+            task.lines.append(f'⏭️  Auto tailor: job #{serial} failed {AUTO_MAX_FAILS} times, skipping it.')
+            fails.pop(serial)
+            return 0
+    return time.time() + AUTO_RETRY_SECS
+
+
+def _auto_tailor_loop():
+    """While the toggle is on, keep running tailor batches from the saved checkpoint."""
+    retry_at, retry_why, fails = 0, '', {}
+    while True:
+        time.sleep(AUTO_POLL_SECS)
+        try:
+            ours = next((t for t in TASKS if t.id == AUTO['task_id']), None)
+            if ours and not ours.running:
+                AUTO['task_id'] = None
+                if not ours.stop_requested:
+                    retry_at, retry_why = _auto_after_batch(ours, fails), 'Last batch failed'
+            if not batch.auto_tailor_enabled():
+                _auto_set('off')
+                continue
+            if ours and ours.running:
+                _auto_set('running', ours.label)
+                continue
+            other = next((t for t in TASKS if t.running and 'tailor' in LANES[t.kind]), None)
+            if other:
+                _auto_set('waiting', f"Waiting for '{other.label}' to finish")
+                continue
+            if time.time() < retry_at:
+                _auto_set('waiting', f"{retry_why} — retrying at {time.strftime('%H:%M', time.localtime(retry_at))}")
+                continue
+            pending = batch.pending_jobs('tailor')
+            if not pending:
+                _auto_set('idle', 'All searched jobs are tailored — waiting for new jobs')
+                continue
+            if not batch.ai_service_up():
+                retry_at, retry_why = time.time() + AUTO_RETRY_SECS, 'AI service unreachable'
+                continue
+            label = f"Auto tailor (from #{pending[0]['serial_number']}, {len(pending)} left)"
+            AUTO['task_id'] = start_task('auto_tailor', label, ['tailor', '--size', str(AUTO_BATCH_SIZE)])['id']
+            _auto_set('running', label)
+        except HTTPException:
+            pass  # lane got taken between the check and the start; try again next tick
+        except Exception as e:
+            _auto_set('waiting', f'Auto tailor error: {e}')
+
+
+@app.on_event('startup')
+def _start_auto_tailor():
+    threading.Thread(target=_auto_tailor_loop, daemon=True).start()
+
+
+class AutoTailorBody(BaseModel):
+    enabled: bool
+
+
+@app.get('/api/auto-tailor')
+def auto_tailor_status():
+    return {'enabled': batch.auto_tailor_enabled(), **AUTO}
+
+
+@app.post('/api/auto-tailor')
+def auto_tailor_toggle(body: AutoTailorBody):
+    batch.set_auto_tailor(body.enabled)
+    ours = next((t for t in TASKS if t.id == AUTO['task_id'] and t.running), None)
+    if not body.enabled and ours:
+        batch.request_stop('tailor')  # finish the current job, then stop
+        ours.stop_requested = True
+        ours.lines.append('⏹️  Auto tailor turned off — finishing the current job...')
+    elif not body.enabled:
+        _auto_set('off')
+    return auto_tailor_status()
 
 # ---------------------------------------------------------------- data
 
@@ -268,6 +369,8 @@ def stop_task(task_id: int, force: bool = False):
     task = _task(task_id)
     if not task.running:
         return task.summary()
+    if task.kind == 'auto_tailor':  # otherwise the watcher would just start the next batch
+        batch.set_auto_tailor(False)
     flags = GRACEFUL_STOP.get(task.kind)
     if flags and not force:
         for flag in flags:

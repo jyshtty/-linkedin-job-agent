@@ -79,3 +79,4 @@ _archive/
 batch_state.json
 batch_state.json.tmp
 .stop_*
+.auto_tailor_on
