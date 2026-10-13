@@ -66,6 +66,36 @@ def load_state():
     return state
 
 
+# Auto-tailor toggle lives in its own flag file (not batch_state.json) so it can't race
+# with a running batch writing its checkpoint.
+AUTO_TAILOR_FILE = '.auto_tailor_on'
+
+
+def auto_tailor_enabled():
+    return os.path.exists(AUTO_TAILOR_FILE)
+
+
+def set_auto_tailor(enabled):
+    if enabled:
+        open(AUTO_TAILOR_FILE, 'w').close()
+    elif os.path.exists(AUTO_TAILOR_FILE):
+        os.remove(AUTO_TAILOR_FILE)
+
+
+def ai_service_up(timeout=5):
+    """Cheap reachability check of the AI endpoint (no tokens spent): any non-5xx reply counts as up."""
+    import requests
+    from dotenv import load_dotenv
+    load_dotenv()
+    endpoint = os.getenv('AZURE_ENDPOINT')
+    if not endpoint:
+        return False
+    try:
+        return requests.get(endpoint, timeout=timeout).status_code < 500
+    except requests.RequestException:
+        return False
+
+
 def save_state(state):
     tmp = STATE_FILE + '.tmp'
     with open(tmp, 'w') as f:

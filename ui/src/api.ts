@@ -54,6 +54,13 @@ export interface TaskLog extends Task {
   log: string[]
 }
 
+export interface AutoTailor {
+  enabled: boolean
+  state: 'off' | 'running' | 'waiting' | 'idle'
+  detail: string
+  task_id: number | null
+}
+
 export interface Meta {
   companies: string[]
   roles: string[]
@@ -95,4 +102,7 @@ export const api = {
   startReferralBatch: (messages: number, max_jobs: number, dry_run: boolean, skip_company_contacts: boolean) =>
     request<Task>('/batch/referral/start', { messages, max_jobs, dry_run, skip_company_contacts }),
   resetBatch: (kind: BatchKind, serial: number | null) => request<BatchInfo>(`/batch/${kind}/reset`, { serial }),
+
+  autoTailor: () => request<AutoTailor>('/auto-tailor'),
+  setAutoTailor: (enabled: boolean) => request<AutoTailor>('/auto-tailor', { enabled }),
 }

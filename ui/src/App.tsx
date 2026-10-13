@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api, type BatchKind, type BatchStatus, type Job, type Meta, type Task } from './api'
+import { api, type AutoTailor, type BatchKind, type BatchStatus, type Job, type Meta, type Task } from './api'
 import { BatchPanel } from './components/BatchPanel'
 import { JobTable } from './components/JobTable'
 import { ReferralPanel, TailorPanel } from './components/JobActions'
@@ -8,13 +8,14 @@ import { TaskPanel } from './components/TaskPanel'
 
 // Must match LANES in api/server.py: Chrome tasks never overlap; tailoring has its own lane.
 const CHROME_KINDS = ['search', 'referral', 'batch_referral', 'flow']
-const TAILOR_KINDS = ['tailor', 'batch_tailor', 'flow']
+const TAILOR_KINDS = ['tailor', 'batch_tailor', 'auto_tailor', 'flow']
 
 export default function App() {
   const [meta, setMeta] = useState<Meta | null>(null)
   const [jobs, setJobs] = useState<Job[]>([])
   const [batch, setBatch] = useState<BatchStatus | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
+  const [auto, setAuto] = useState<AutoTailor | null>(null)
   const [activeTask, setActiveTask] = useState<number | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -40,11 +41,20 @@ export default function App() {
     let tick = 0
     const timer = setInterval(async () => {
       try {
-        const list = await api.tasks()
+        const [list, a] = await Promise.all([api.tasks(), api.autoTailor()])
         setTasks(list)
+        setAuto(a)
         const nowRunning = new Set(list.filter((t) => t.status === 'running').map((t) => t.id))
-        const finished = [...runningIds.current].some((id) => !nowRunning.has(id))
+        const finishedIds = [...runningIds.current].filter((id) => !nowRunning.has(id))
+        const finished = finishedIds.length > 0
         runningIds.current = nowRunning
+        // Surface failures: show the reason at the top and open that task's log
+        for (const t of list.filter((t) => finishedIds.includes(t.id) && t.status === 'failed')) {
+          const res = await api.taskLog(t.id, 0)
+          const reason = [...res.log].reverse().find((l) => l.includes('❌') || /Error|Exception/.test(l))
+          setError(`"${t.label}" failed${reason ? `: ${reason.replace('❌', '').trim()}` : ''} — see Activity below.`)
+          setActiveTask(t.id)
+        }
         tick++
         if (finished || (nowRunning.size > 0 && tick % 5 === 0)) refreshData()
       } catch {
@@ -57,13 +67,15 @@ export default function App() {
   const running = tasks.filter((t) => t.status === 'running')
   const chromeBusy = running.some((t) => CHROME_KINDS.includes(t.kind))
   const tailorBusy = running.some((t) => TAILOR_KINDS.includes(t.kind))
-  const runningBatch = (kind: BatchKind) => running.find((t) => t.kind === `batch_${kind}` || t.kind === 'flow')
+  const runningBatch = (kind: BatchKind) =>
+    running.find((t) => t.kind === `batch_${kind}` || t.kind === 'flow' || (kind === 'tailor' && t.kind === 'auto_tailor'))
   const selectedJob = jobs.find((j) => j.serial === selected)
 
   const launch = async (start: () => Promise<Task>) => {
     setError(null)
     try {
       const task = await start()
+      runningIds.current.add(task.id) // so even an instant failure is reported
       setTasks((prev) => [task, ...prev])
       setActiveTask(task.id)
     } catch (e) {
@@ -86,6 +98,14 @@ export default function App() {
     if (ok) launch(() => api.flow(roles, companies, 10, 10))
   }
 
+  const toggleAuto = async () => {
+    try {
+      setAuto(await api.setAutoTailor(!auto?.enabled))
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   const resetBatch = async (kind: BatchKind, serial: number | null) => {
     try {
       await api.resetBatch(kind, serial)
@@ -103,6 +123,28 @@ export default function App() {
           {jobs.length} jobs · {jobs.filter((j) => j.resume).length} tailored ·{' '}
           {jobs.reduce((n, j) => n + j.referrals.length, 0)} referrals sent
         </span>
+        <div className={`auto-tailor ${auto?.enabled ? `on ${auto.state}` : ''}`}>
+          <button
+            role="switch"
+            aria-checked={!!auto?.enabled}
+            className="switch"
+            disabled={!auto}
+            onClick={toggleAuto}
+            title="Keep tailoring resumes in the background for every searched job, resuming where it stopped"
+          >
+            <span className="knob" />
+          </button>
+          <div>
+            <div className="auto-title">
+              Auto tailor {auto?.enabled ? (auto.state === 'running' ? '· busy' : '· on') : '· off'}
+            </div>
+            <div className="hint">
+              {auto?.enabled
+                ? `${auto.detail || 'Starting…'} · done up to #${batch?.tailor.stopped_at_serial ?? '—'}`
+                : `Next job after #${batch?.tailor.stopped_at_serial ?? '—'} · ${batch?.tailor.pending ?? 0} left`}
+            </div>
+          </div>
+        </div>
       </header>
 
       {error && (
