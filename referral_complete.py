@@ -50,12 +50,40 @@ on run argv
 end run
 '''
 
+# Chrome's "Allow JavaScript from Apple Events" is per profile, so open the tab in a
+# window whose profile allows it, preferring one that already has LinkedIn open.
 OPEN_TAB_SCRIPT = '''
+on scriptable(t)
+    try
+        tell application "Google Chrome" to execute t javascript "1"
+        return true
+    on error errMsg
+        -- chrome:// and other internal pages refuse scripts even when it's allowed
+        return errMsg does not contain "turned off"
+    end try
+end scriptable
+
+on pickWindow()
+    tell application "Google Chrome"
+        set fallback to missing value
+        repeat with w in windows
+            if my scriptable(active tab of w) then
+                repeat with t in tabs of w
+                    if URL of t contains "linkedin.com" then return w
+                end repeat
+                if fallback is missing value then set fallback to w
+            end if
+        end repeat
+        return fallback
+    end tell
+end pickWindow
+
 on run argv
     tell application "Google Chrome"
-        activate
         if (count of windows) is 0 then make new window
-        tell front window
+        set w to my pickWindow()
+        if w is missing value then return "__BLOCKED__"
+        tell w
             set t to make new tab with properties {URL:(item 1 of argv)}
             return id of t
         end tell
@@ -302,8 +330,12 @@ class Chrome:
     """Thin AppleScript bridge to one Chrome tab."""
 
     def __init__(self, url):
-        result = self._osascript(OPEN_TAB_SCRIPT, url)
-        self.tab_id = result.strip()
+        result = self._osascript(OPEN_TAB_SCRIPT, url).strip()
+        if result == '__BLOCKED__':
+            sys.exit("\n❌ No Chrome window allows scripted JavaScript.\n"
+                     "   In the Chrome profile that's logged in to LinkedIn, enable:\n"
+                     "   View > Developer > Allow JavaScript from Apple Events\n")
+        self.tab_id = result
 
     @staticmethod
     def _osascript(script, *args):

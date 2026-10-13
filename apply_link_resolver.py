@@ -40,7 +40,12 @@ AGGREGATOR_DOMAINS = (
 
 # Query params that only track where the click came from
 TRACKING_PARAMS = {'source', 'src', 'sourceid', 'ref', 'refid', 'trid', 'lever-source',
-                   'gh_src', 'board_id', 'trk', 'trackingid', 'codes', 'iis', 'iisn'}
+                   'gh_src', 'board_id', 'trk', 'trackingid', 'codes', 'iis', 'iisn',
+                   'p_sid', 'p_uid', 'ss', 'target', 'jobpipeline'}
+
+# Short/tracking links that redirect to the real careers page (Phenom, Greenhouse, ...)
+SHORTLINK_DOMAINS = ('prng.co', 'grnh.se', 'lnkd.in', 'bit.ly', 'tinyurl.com', 't.co', 'smrtr.io',
+                     'ow.ly', 'rebrand.ly')
 
 UUID = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 
@@ -75,15 +80,45 @@ on run argv
 end run
 '''
 
+# Use a LinkedIn tab whose Chrome profile allows scripted JavaScript (a per-profile setting)
 FIND_OR_OPEN_TAB_SCRIPT = '''
+on scriptable(t)
+    try
+        tell application "Google Chrome" to execute t javascript "1"
+        return true
+    on error errMsg
+        -- chrome:// and other internal pages refuse scripts even when it's allowed
+        return errMsg does not contain "turned off"
+    end try
+end scriptable
+
+on pickWindow()
+    tell application "Google Chrome"
+        set fallback to missing value
+        repeat with w in windows
+            if my scriptable(active tab of w) then
+                repeat with t in tabs of w
+                    if URL of t contains "linkedin.com" then return w
+                end repeat
+                if fallback is missing value then set fallback to w
+            end if
+        end repeat
+        return fallback
+    end tell
+end pickWindow
+
 tell application "Google Chrome"
     repeat with w in windows
         repeat with t in tabs of w
-            if URL of t contains "linkedin.com" then return (id of t) as text
+            if URL of t contains "linkedin.com" then
+                if my scriptable(t) then return (id of t) as text
+            end if
         end repeat
     end repeat
     if (count of windows) is 0 then make new window
-    tell front window
+    set w to my pickWindow()
+    if w is missing value then return ""
+    tell w
         set t to make new tab with properties {URL:"https://www.linkedin.com/feed/"}
         return "NEW:" & ((id of t) as text)
     end tell
@@ -158,6 +193,22 @@ def clean_url(url):
     return urlunparse((p.scheme, p.netloc, path, p.params, query, fragment))
 
 
+def expand_shortlink(url):
+    """Follow a short/tracking link to the careers page it points at (unchanged if it isn't one)."""
+    host = urlparse(url).netloc.lower()
+    if not any(host == d or host.endswith('.' + d) for d in SHORTLINK_DOMAINS):
+        return url
+    try:
+        return requests.get(url, headers=UA, timeout=15, allow_redirects=True).url
+    except requests.RequestException:
+        return url
+
+
+def normalize_job_id(value):
+    """Drop locale suffixes some portals append to requisition numbers (135245-en_US -> 135245)."""
+    return re.sub(r'[-_][a-z]{2}[-_][A-Z]{2}$', '', value.strip()) if value else value
+
+
 def is_aggregator(url):
     host = urlparse(url).netloc.lower()
     return any(d in host for d in AGGREGATOR_DOMAINS)
@@ -180,6 +231,11 @@ def job_id_from_url(url):
     for k, v in parse_qsl(p.query + '&' + (p.fragment.split('?', 1)[1] if '?' in p.fragment else '')):
         if k.lower() in ID_PARAMS and plausible_id(v):
             return v
+
+    # Radancy/TalentBrew portals (/job/<city>/<title>/<org id>/<page id>): the URL only has
+    # internal page numbers, so the requisition ID has to come from the description or page
+    if re.search(r'/job/[^/]+/[^/]+/\d+/\d+/?$', p.path):
+        return None
 
     if 'myworkdayjobs.com' in host and segments:
         # .../job/Mumbai-India/Senior-DevOps-Engineer_R15145  ->  R15145
@@ -209,6 +265,45 @@ def job_id_from_url(url):
         for token in re.split(r'[-_]', seg):
             if re.search(r'\d{4,}', token) and plausible_id(token):
                 return token
+    return None
+
+
+def is_greenhouse(url):
+    """Greenhouse-hosted or Greenhouse-backed posting (board URL, gh_jid / gh_src params, grnh.se link)."""
+    low = url.lower()
+    return 'greenhouse.io' in low or 'grnh.se' in low or 'gh_jid=' in low or 'gh_src=' in low
+
+
+def greenhouse_requisition(url, posting_id):
+    """
+    The company's requisition ID for a Greenhouse posting (e.g. Okta 'P20263_3519911'). The number
+    in Greenhouse links is only the posting ID; the public board API returns the requisition.
+    """
+    p = urlparse(url)
+    m = re.search(r'greenhouse\.io/(?:embed/job_app\?for=)?([A-Za-z0-9_-]+)/jobs/(\d+)', url)
+    if m:
+        tokens, posting_id = [m.group(1)], m.group(2)
+    else:
+        q = dict(parse_qsl(p.query))
+        posting_id = q.get('gh_jid') or posting_id
+        host = p.netloc.lower().split(':')[0]
+        parts = [x for x in host.split('.') if x not in ('www', 'careers', 'jobs', 'boards', 'job-boards')]
+        tokens = [parts[0]] if parts else []
+        q_for = q.get('for')
+        if q_for:
+            tokens.insert(0, q_for)
+    if not posting_id or not str(posting_id).isdigit():
+        return None
+    for token in tokens:
+        try:
+            resp = requests.get(f'https://boards-api.greenhouse.io/v1/boards/{token}/jobs/{posting_id}',
+                                headers=UA, timeout=10)
+        except requests.RequestException:
+            continue
+        if resp.status_code == 200:
+            req = (resp.json().get('requisition_id') or '').strip()
+            if plausible_id(req):
+                return req
     return None
 
 
@@ -264,11 +359,15 @@ def resolve(linkedin_job_id, session):
     if not raw_url:
         return {**result, 'apply_status': 'NO_COMPANY_URL', 'company_career_url': 'NO_COMPANY_URL'}
 
-    url = clean_url(raw_url)
+    expanded = expand_shortlink(raw_url)
+    url = clean_url(expanded)
     if is_aggregator(url):
         return {**result, 'apply_status': 'AGGREGATOR', 'company_career_url': url}
 
-    job_id = job_id_from_url(url) or job_id_from_text(result['description']) or job_id_from_page(url)
+    job_id = normalize_job_id(job_id_from_url(url) or job_id_from_text(result['description'])
+                              or job_id_from_page(url))
+    if job_id and is_greenhouse(raw_url + ' ' + expanded):
+        job_id = greenhouse_requisition(expanded, job_id) or job_id
     if not job_id:
         return {**result, 'apply_status': 'NO_JOB_ID', 'company_career_url': url}
     return {**result, 'apply_status': 'OK', 'company_career_url': url, 'company_job_id': job_id}
